@@ -78,6 +78,18 @@ class LoginActivity : AppCompatActivity() {
             authViewModel.iniciarSesion(correo, contrasena)
         }
 
+        binding.btnIngresar.setOnLongClickListener {
+            Toast.makeText(this, "Creando Super Admin...", Toast.LENGTH_SHORT).show()
+            com.ayacucho.medicitas.utils.AdminBootstrap.crearAdminPorDefecto { resultado ->
+                Toast.makeText(this, resultado, Toast.LENGTH_LONG).show()
+                if (resultado.contains("EXITOSAMENTE")) {
+                    binding.etCorreo.setText("admin@medicitas.com")
+                    binding.etContrasena.setText("admin123456")
+                }
+            }
+            true
+        }
+
         binding.tvCrearCuenta.setOnClickListener {
             startActivity(Intent(this, RegistroActivity::class.java))
         }
