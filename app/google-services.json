@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "375035672206",
+    "project_id": "medicitas-93f59",
+    "storage_bucket": "medicitas-93f59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375035672206:android:480f71bc97a1a91c31bbdf",
+        "android_client_info": {
+          "package_name": "com.ayacucho.medicitas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA58ZyMXhBdcxqs0QPbp9Wgkt_q7FbEmzY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

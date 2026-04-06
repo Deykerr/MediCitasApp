@@ -1,0 +1,90 @@
+# MEDICITAS — Fase 4: Módulo del Personal Médico
+
+## Resumen
+
+Se implementó el módulo completo del médico con agenda en tiempo real y gestión de estados de citas.
+
+## Archivos Creados (Fase 4)
+
+### Kotlin (4 archivos)
+| Archivo | Descripción | RFs |
+|---------|-------------|-----|
+| [MedicoRepository.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/repository/MedicoRepository.kt) | Firestore con SnapshotListener para tiempo real | RF05.1-RF05.5 |
+| [MedicoViewModel.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/viewmodel/MedicoViewModel.kt) | LiveData para agenda, estadísticas y horarios | RF05 |
+| [MedicoHomeActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/doctor/MedicoHomeActivity.kt) | Agenda diaria + botones de estado | RF05.1-RF05.3 |
+| [MisHorariosActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/doctor/MisHorariosActivity.kt) | Visualizar y bloquear horarios | RF05.4-RF05.5 |
+
+### Layouts XML (3 archivos)
+| Archivo | Uso |
+|---------|-----|
+| [activity_medico_home.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/activity_medico_home.xml) | Dashboard con stats + agenda diaria |
+| [item_cita_medico.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/item_cita_medico.xml) | Tarjeta de cita con badge de estado y botones |
+| [item_horario_medico.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/item_horario_medico.xml) | Horario con toggle bloquear/desbloquear |
+
+### Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| [LoginActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/auth/LoginActivity.kt) | Navegación a MedicoHomeActivity |
+| [MainActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/MainActivity.kt) | Sesión persistente del médico |
+| [AndroidManifest.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/AndroidManifest.xml) | Registro de activities del médico |
+
+## Funcionalidades Implementadas
+
+| RF | Descripción | Implementación |
+|----|-------------|----------------|
+| RF05.1 | Visualizar agenda diaria | SnapshotListener en tiempo real + DatePicker |
+| RF05.2 | Datos del paciente | Campos desnormalizados en CitaMedica (nombre, DNI) |
+| RF05.3 | Gestionar estados | Botones: Atendido ✅, No Asistió ⚠️, Cancelar ❌ |
+| RF05.4 | Ver horarios | Lista de horarios asignados con cupos |
+| RF05.5 | Bloquear horarios | Toggle Bloquear/Desbloquear por ausencia |
+
+## Flujo del Médico
+
+```mermaid
+flowchart TD
+    A["Login como Médico"] --> B["MedicoHomeActivity"]
+    B --> C["Dashboard"]
+    C --> C1["Stats: Total / Pendientes / Atendidas"]
+    C --> C2["DatePicker → Cambiar fecha"]
+    C --> C3["Lista citas (tiempo real)"]
+    C3 --> D["Cada tarjeta muestra:"]
+    D --> D1["Hora + Estado"]
+    D --> D2["Nombre paciente + DNI"]
+    D --> D3["Motivo consulta"]
+    D --> D4["Botones de acción"]
+    D4 --> E1["✅ Atendido"]
+    D4 --> E2["⚠️ No Asistió"]
+    D4 --> E3["❌ Cancelar"]
+    B --> F["Mis Horarios"]
+    F --> F1["Ver horarios asignados"]
+    F --> F2["Bloquear por ausencia"]
+    F --> F3["Desbloquear si retorna"]
+```
+
+## Decisiones Técnicas
+
+> [!IMPORTANT]
+> ### SnapshotListener (Tiempo Real)
+> En lugar de `.get()` (consulta única), se usa `addSnapshotListener` para que la agenda se actualice automáticamente cuando un paciente reserve o cancele una cita. El listener se limpia en `onCleared()` del ViewModel para evitar memory leaks.
+
+> [!NOTE]
+> ### Badges de Estado con Colores
+> Cada estado de cita tiene un color semántico:
+> - 🔵 **Reservada** → Azul
+> - 🟢 **Atendida** → Verde
+> - 🟠 **No Asistió** → Naranja
+> - 🔴 **Cancelada** → Rojo
+
+> [!NOTE]
+> ### Botones de Acción Condicionados
+> Los botones de cambio de estado solo aparecen cuando la cita está en estado "Reservada". Si ya fue atendida o cancelada, se ocultan para evitar dobles cambios.
+
+## Estado Actual del Proyecto
+
+| Fase | Módulo | Estado |
+|------|--------|--------|
+| 1 | Modelos + Estructura | ✅ Completado |
+| 2 | Autenticación (Auth) | ✅ Completado |
+| 3 | Administrador (CRUD) | ✅ Completado |
+| 4 | **Personal Médico** | ✅ **Completado** |
+| 5 | Paciente (Reservas) | 🔲 Pendiente |

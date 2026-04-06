@@ -1,0 +1,70 @@
+# MEDICITAS — Fase 5: Módulo del Paciente & Notificaciones (RF07)
+
+## Resumen
+
+Se ha finalizado la integración del Módulo Paciente sumando un sistema completo de **Notificaciones Locales (Push)** y **Tareas en Segundo Plano** con Android WorkManager, evitando completamente la necesidad de un plan de pago Blaze para Cloud Functions.
+
+## 📱 Notificaciones & Recordatorios (RF07)
+
+### 1. Permisos y Configuración de Android 13+
+- Se incluyeron en el `AndroidManifest.xml` los permisos `POST_NOTIFICATIONS` y `SCHEDULE_EXACT_ALARM`.
+- En `PacienteHomeActivity.kt` se implementó la petición en tiempo de ejecución (Runtime Permissions) utilizando `ActivityResultContracts.RequestPermission()`.
+
+### 2. Capa de Utilidades (`NotificationHelper.kt`)
+- Se centralizó la creación del "Canal de Notificaciones" que en Android 8.0+ es estricto para las notificaciones `IMPORTANCE_HIGH`.
+- Encapsula la construcción y el llamado de `NotificationManager.notify()`.
+
+### 3. Notificación Inmediata al Reservar (RF07.1)
+- Cada que el método `confirmarReserva` del `PacienteRepository` se ejecuta, ahora guarda un documento extra en la colección `notificaciones`. Todo ocurre en un **Batch Write** junto con la creación de la cita y la reserva del cupo.
+- Al detectarse el caso de éxito (`viewModel.reservaExitosa`), `ReservaActivity` invoca a `NotificationHelper` y suelta una notificación push visual con el título **¡Cita Confirmada!**.
+
+### 4. Tareas en Segundo Plano con WorkManager (RF07.2)
+- Se creó `RecordatorioWorker.kt`, clase que hereda de `androidx.work.Worker` para disparar una notificación de recordatorio.
+- Al confirmarse una reserva exitosa, la actividad calcula exactamente cuántos milisegundos faltan para que sea 2 horas antes de la cita (`delayMilis`).
+- Un `OneTimeWorkRequest` de WorkManager se encola con dicho retraso. Si cierran la app, la cierran del panel de recientes o se reinicia el teléfono, Android despertará al worker automáticamente para notificar.
+
+### 5. Listener de Cambios en Tiempo Real (RF07.3)
+- Se integró una función de escucha continua vía `addSnapshotListener` en el `PacienteRepository`.
+- `PacienteViewModel` expone `cambioCitaDetectado`.
+- `PacienteHomeActivity` se suscribe en la pantalla principal. Tan pronto como el administrador cancela una cita, el evento viaja del Servidor -> SDK -> App en milisegundos, disparando una notificación local que advierte **"Cita Cancelada"**.
+
+---
+
+## Archivos Creados (Fase 5 - Actualización)
+
+| Archivo | Responsabilidad |
+|---------|-----------------|
+| [NotificationHelper.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/utils/NotificationHelper.kt) | Canales y UI de Push local |
+| [RecordatorioWorker.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/utils/RecordatorioWorker.kt) | Background Task Execution |
+| [build.gradle.kts (App)](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/build.gradle.kts) | Dependency injection: `androidx.work:work-runtime-ktx` |
+| [AndroidManifest.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/AndroidManifest.xml) | System-level permissions |
+
+## Flujo de Notificaciones
+
+```mermaid
+sequenceDiagram
+    participant UI as ReservaActivity
+    participant VM as ViewModel
+    participant Rep as Repository
+    participant FS as Firestore
+    participant WM as WorkManager
+
+    UI->>VM: confirmarReserva()
+    VM->>Rep: confirmarReserva(batch)
+    Rep->>FS: set(Cita), set(Notificacion), update(Horario)
+    FS-->>Rep: onSuccess()
+    Rep-->>VM: idCita
+    VM-->>UI: reservaExitosa.observe
+    UI->>UI: NotificationHelper.mostrar()
+    Note over UI: Push Local "¡Cita Confirmada!"
+    UI->>WM: enqueue(RecordatorioWorker)
+    Note over WM: Delay = X milisegundos (2 hrs antes)
+    WM-->>WM: ...Tiempo pasa (ej: días)...
+    WM->>WM: Wake Up App -> mostrarNotificacion()
+    Note over WM: Push Local "Recordatorio"
+```
+
+> [!TIP]
+> **Zero Cost:** Reemplazar funciones Node.js de Firebase Cloud Functions en el backend de Google, por `WorkManager` de Android combinada con `addSnapshotListener`, logra exactamente el mismo valor de producto exigido (RF07), eliminando el requisito excluyente de asociar tarjetas de crédito reales.
+
+### Todos los requerimientos del módulo paciente y notificaciones están 100% listos. 🚀

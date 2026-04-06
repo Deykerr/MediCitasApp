@@ -1,0 +1,108 @@
+# MEDICITAS — Fase 5: Módulo del Paciente
+
+## Resumen
+
+Se implementó el módulo completo del paciente con flujo de reserva paso a paso, historial de citas con pestañas, cancelación con restauración de cupos, y perfil del paciente.
+
+## Archivos Creados (Fase 5)
+
+### Kotlin (6 archivos)
+| Archivo | Descripción | RFs |
+|---------|-------------|-----|
+| [PacienteRepository.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/repository/PacienteRepository.kt) | Consultas en cascada, reserva con batch, cancelación con restauración de cupos | RF02-RF04 |
+| [PacienteViewModel.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/viewmodel/PacienteViewModel.kt) | Flujo paso a paso, separación próximas/pasadas, validaciones | RF02-RF04 |
+| [PacienteHomeActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/patient/PacienteHomeActivity.kt) | Dashboard con 3 tarjetas de navegación | - |
+| [ReservaActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/patient/ReservaActivity.kt) | Flujo 4 pasos con ViewFlipper + adaptadores | RF02-RF04 |
+| [MisCitasActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/patient/MisCitasActivity.kt) | Historial con tabs Próximas/Pasadas | RF04.5-RF04.6 |
+| [MiPerfilActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/patient/MiPerfilActivity.kt) | Perfil con datos personales | - |
+
+### Layouts XML (6 archivos)
+| Archivo | Uso |
+|---------|-----|
+| [activity_paciente_home.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/activity_paciente_home.xml) | Dashboard: 3 cards (Reserva, Citas, Perfil) |
+| [activity_reserva.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/activity_reserva.xml) | ViewFlipper con indicador de 4 pasos + resumen |
+| [activity_mis_citas.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/activity_mis_citas.xml) | TabLayout (Próximas/Pasadas) + RecyclerView |
+| [activity_mi_perfil.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/activity_mi_perfil.xml) | Perfil con avatar iniciales |
+| [item_seleccion.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/item_seleccion.xml) | Card seleccionable (Postas, Especialidades, Médicos) |
+| [item_horario_seleccion.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/item_horario_seleccion.xml) | Card horario con botón "Elegir" |
+| [item_cita_paciente.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/res/layout/item_cita_paciente.xml) | Cita con badge de estado + botón cancelar |
+
+### Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| [LoginActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/view/auth/LoginActivity.kt) | Navegación a PacienteHomeActivity |
+| [MainActivity.kt](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/java/com/ayacucho/medicitas/MainActivity.kt) | Sesión persistente del paciente |
+| [AndroidManifest.xml](file:///c:/Users/LOQ/AndroidStudioProjects/MEDICITAS/app/src/main/AndroidManifest.xml) | 4 activities del paciente registradas |
+
+## Flujo de Reserva (Paso a Paso)
+
+```mermaid
+flowchart TD
+    A["PacienteHomeActivity"] --> B["Nueva Reserva"]
+    B --> C["Paso 1: Seleccionar Posta"]
+    C --> D["Paso 2: Seleccionar Especialidad"]
+    D --> E["Paso 3: Seleccionar Médico"]
+    E --> F["Paso 4: Elegir Horario"]
+    F --> G["Ver Resumen + Motivo"]
+    G --> H["Confirmar Reserva"]
+    H --> I{¿Validaciones?}
+    I -->|RF04.3: Duplicados| J["Error: ya tienes cita"]
+    I -->|RF04.2: Sin cupos| K["Error: no hay cupos"]
+    I -->|✅ Todo OK| L["Batch Write"]
+    L --> L1["Crear CitaMedica en Firestore"]
+    L --> L2["Decrementar cuposDisponibles"]
+    L --> M["🎉 Reserva Exitosa"]
+```
+
+## Mejoras Implementadas (vs. código base del usuario)
+
+| Mejora | Detalle |
+|--------|---------|
+| ⚡ **Batch Write** | Cita + decremento de cupo en una sola transacción atómica |
+| 🔒 **Prevención de duplicados** (RF04.3) | Verifica que no exista cita del mismo paciente + médico + fecha |
+| 📉 **Gestión de cupos** | Al reservar: `cuposDisponibles -= 1`. Al cancelar: `cuposDisponibles += 1` |
+| 📋 **Desnormalización completa** (RF04.4) | La cita guarda: nombrePaciente, dniPaciente, nombreMedico, nombrePosta, nombreEspecialidad |
+| 📅 **Filtro de fechas** | Solo muestra horarios con fecha >= hoy |
+| 🔄 **Separación Próximas/Pasadas** | Compara fecha de cita vs fecha actual del sistema |
+| 🚫 **Cancelación inteligente** | Solo se muestra botón Cancelar en citas con estado "Reservada" |
+| 📊 **Indicador de pasos** | Círculos numerados con colores y líneas de conexión |
+| 🎨 **Badges de estado** | Colores semánticos: 🔵 Reservada, 🟢 Atendida, 🟠 No Asistió, 🔴 Cancelada |
+
+## Routing Completo (Todos los Roles)
+
+```mermaid
+flowchart TD
+    A["MainActivity<br/>(Splash/Router)"] --> B{¿Sesión activa?}
+    B -->|No| C["LoginActivity"]
+    B -->|Sí| D{Determinar rol}
+    D -->|Paciente| E["PacienteHomeActivity"]
+    D -->|Médico| F["MedicoHomeActivity"]  
+    D -->|Admin| G["AdminHomeActivity"]
+    C -->|Login exitoso| D
+    
+    E --> E1["Nueva Reserva (4 pasos)"]
+    E --> E2["Mis Citas (Próximas/Pasadas)"]
+    E --> E3["Mi Perfil"]
+    
+    F --> F1["Agenda del Día (tiempo real)"]
+    F --> F2["Mis Horarios (bloquear)"]
+    
+    G --> G1["CRUD Postas"]
+    G --> G2["CRUD Especialidades"]
+    G --> G3["CRUD Personal Médico"]
+    G --> G4["CRUD Horarios"]
+```
+
+## Estado Final del Proyecto
+
+| Fase | Módulo | Archivos Kotlin | Layouts XML | Estado |
+|------|--------|:-:|:-:|--------|
+| 1 | Modelos + Estructura | 10 | 0 | ✅ |
+| 2 | Autenticación | 6 | 3 | ✅ |
+| 3 | Administrador | 6 | 10 | ✅ |
+| 4 | Personal Médico | 4 | 3 | ✅ |
+| 5 | **Paciente** | **6** | **7** | ✅ |
+| | **TOTAL** | **32** | **23** | **✅ Completo** |
+
+> [!NOTE]
+> Todos los TODOs de navegación han sido resueltos. Los 3 roles (Paciente, Médico, Admin) tienen routing completo tanto desde LoginActivity como desde el session router (MainActivity).

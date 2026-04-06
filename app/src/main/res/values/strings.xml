@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">MEDICITAS</string>
+
+    <!-- Login -->
+    <string name="login_titulo">Bienvenido</string>
+    <string name="login_subtitulo">Inicia sesión para continuar</string>
+    <string name="hint_correo">Correo electrónico</string>
+    <string name="hint_contrasena">Contraseña</string>
+    <string name="btn_ingresar">Ingresar</string>
+    <string name="txt_crear_cuenta">¿No tienes cuenta? Regístrate</string>
+    <string name="txt_olvido_contrasena">¿Olvidaste tu contraseña?</string>
+
+    <!-- Registro -->
+    <string name="registro_titulo">Crear Cuenta</string>
+    <string name="registro_subtitulo">Regístrate como paciente</string>
+    <string name="hint_nombres">Nombres</string>
+    <string name="hint_apellidos">Apellidos</string>
+    <string name="hint_dni">DNI (8 dígitos)</string>
+    <string name="hint_telefono">Teléfono (9 dígitos)</string>
+    <string name="hint_confirmar_contrasena">Confirmar contraseña</string>
+    <string name="btn_registrarse">Registrarse</string>
+    <string name="txt_ya_tienes_cuenta">¿Ya tienes cuenta? Inicia sesión</string>
+
+    <!-- Recuperar Contraseña -->
+    <string name="recuperar_titulo">Recuperar Contraseña</string>
+    <string name="recuperar_subtitulo">Ingresa tu correo para recibir instrucciones</string>
+    <string name="btn_enviar_enlace">Enviar enlace</string>
+    <string name="txt_volver_login">Volver al inicio de sesión</string>
+
+    <!-- Mensajes -->
+    <string name="msg_registro_exitoso">Registro exitoso. Bienvenido a MEDICITAS</string>
+    <string name="msg_login_exitoso">Sesión iniciada correctamente</string>
+    <string name="msg_correo_recuperacion">Se envió un enlace de recuperación a tu correo</string>
+    <string name="msg_campos_vacios">Por favor completa todos los campos</string>
+    <string name="msg_dni_invalido">El DNI debe tener 8 dígitos numéricos</string>
+    <string name="msg_telefono_invalido">El teléfono debe tener 9 dígitos</string>
+    <string name="msg_correo_invalido">Ingresa un correo válido</string>
+    <string name="msg_contrasena_corta">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="msg_contrasenas_no_coinciden">Las contraseñas no coinciden</string>
+    <string name="msg_error_general">Ocurrió un error. Inténtalo de nuevo</string>
+    <string name="msg_cargando">Cargando…</string>
+    <string name="msg_cerrar_sesion">¿Estás seguro de cerrar sesión?</string>
+</resources>

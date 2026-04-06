@@ -1,0 +1,52 @@
+# MEDICITAS — Fase 7 y 8: UI/UX, Validaciones y Manejo de Errores
+
+## Resumen
+
+El proyecto ha pasado de ser un código funcional a una aplicación estructurada robusta lista para producción, incorporando estándares modernos de Android propuestos por Google (ViewBinding), manejo de estados asíncronos y defensas activas frente a errores de usuario y desconexiones.
+
+---
+
+## 🎨 Fase 7: Experiencia de Usuario (UX)
+
+### 1. ViewBinding (Adiós a `findViewById`)
+Se ha configurado la opción en el archivo `build.gradle.kts` (nivel App) habilitando la generación de clases de Binding de forma segura.
+* **Impacto:** Evita cierres forzados (`NullPointerException`) si una vista cambia o se renombra en el XML.
+* **Archivos Refactorizados:** Las actividades de autenticación como `LoginActivity` y `RegistroActivity` se han actualizado para usar `ActivityLoginBinding` y `ActivityRegistroBinding`, respectivamente. Al referenciar el frontend mediante el objeto `binding`, el tipo y el ID están estrictamente validados en tiempo de compilación.
+
+### 2. Estados de Carga (Loading States)
+Todas las llamadas a la base de datos Firestore ahora controlan un objeto de tipo `ProgressBar`. El **ViewModel** expone una variable `isLoading (LiveData<Boolean>)`.
+* **Impacto:** Mientras el celular hace una red llamada, la rueda de carga aparece y **el botón principal de acción se deshabilita (`binding.btnIngresar.isEnabled = !cargando`)**.
+* **Resultado:** Esto bloquea que un paciente impaciente presione 3 veces el botón de "Reservar" e inserte 3 citas duplicadas en el servidor, un clásico problema de UX.
+
+---
+
+## 🛡️ Fase 8: Manejo de Errores y Validaciones
+
+### 1. Validación de Formularios Strict
+
+No se envía ni una solicitud de Auth al servidor si los daots no cumplen los criterios locales primero.
+* **Correo:** Se usa `android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches()` para garantizar que solo ingresen correos con formato `@`.
+* **DNI:** Validación estricta que impide que este campo (clave principal del historial clínico) mida algo diferente a los 8 dígitos requeridos por RENIEC.
+* **Contraseñas:** Firebase Authentication requiere como mínimo 6 caracteres en la clave, la validación ahora se captura visualmente en la caja de texto mediante `binding.etContrasena.error = "Mínimo 6 caracteres"`.
+* **Campos vacíos:** No se permiten envíos con campos nulos en Nombres, Apellidos o Teléfono.
+
+### 2. Verificación de Internet Estricta (RNF02.1)
+
+Como requiere la documentación, la aplicación requiere internet para comunicarse con la nube de la Posta Médica. Intentarlo mandar sin WiFi causará que la petición quede colgada.
+
+* **El componente `NetworkUtils.kt`:** Evalúa todos los canales de transporte (`TRANSPORT_WIFI`, `TRANSPORT_CELLULAR`, `TRANSPORT_ETHERNET`) interrogando al `ConnectivityManager` del dispositivo (incluso para versiones modernas Android 13+).
+* **Barrera de Contención:**
+  * En **MainActivity (Splash):** Si no hay internet al iniciar la app, corta el proceso de sincronizar la persistencia y te da un `Toast` invitando a reconectar.
+  * En **LoginActivity** y **RegistroActivity:** Si vas a presionar el botón de inicio de sesión/registro sin datos, se bloquea la llamada al Firestore ahorrando memoria y uso inútil.
+
+## Refactorizaciones Entregadas
+
+| Archivo | Nivel | Cambio |
+|---------|-------|--------|
+| `build.gradle.kts` | Arquitectura | `viewBinding = true` |
+| `NetworkUtils.kt` | Utilidades | Creado verificador de red |
+| `MainActivity.kt` | Splash | Validando RED ➔ Validando LOCAL ➔ Sesión |
+| `LoginActivity.kt` | UX / Validación | 100% migrado a ViewBinding. + Validaciones regex & largo de pass |
+| `RegistroActivity.kt`| UX / Validación | 100% migrado a ViewBinding. + Reglas DNI, correo, passwords coinciden |
+
+### ¡La aplicación se encuentra finalizada y lista para Compilar (Release) o presentar en tu sustentación de Tesis/Proyecto de Grado! 🎓
