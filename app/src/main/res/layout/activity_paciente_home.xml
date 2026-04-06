@@ -53,7 +53,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:contentDescription="Cerrar sesión"
-                android:tint="@color/white" />
+                app:tint="@color/white" />
         </LinearLayout>
     </LinearLayout>
 
@@ -90,7 +90,7 @@
                         android:layout_height="52dp"
                         android:src="@android:drawable/ic_menu_my_calendar"
                         android:contentDescription="Nueva reserva"
-                        android:tint="@color/white" />
+                        app:tint="@color/white" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -141,7 +141,7 @@
                         android:layout_height="44dp"
                         android:src="@android:drawable/ic_menu_recent_history"
                         android:contentDescription="Mis citas"
-                        android:tint="@color/accent" />
+                        app:tint="@color/accent" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -190,7 +190,7 @@
                         android:layout_height="44dp"
                         android:src="@android:drawable/ic_menu_info_details"
                         android:contentDescription="Mi perfil"
-                        android:tint="@color/primary_light" />
+                        app:tint="@color/primary_light" />
 
                     <LinearLayout
                         android:layout_width="0dp"

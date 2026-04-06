@@ -65,6 +65,13 @@ class ReservaActivity : AppCompatActivity() {
         // Cargar datos del paciente y postas
         viewModel.cargarDatosPaciente()
         viewModel.cargarPostas()
+
+        // Manejar botón de atrás
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                onBackPressedCustom()
+            }
+        })
     }
 
     private fun inicializarVistas() {
@@ -351,10 +358,6 @@ class ReservaActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        onBackPressedCustom()
-    }
 }
 
 // ==================== ADAPTADORES ====================

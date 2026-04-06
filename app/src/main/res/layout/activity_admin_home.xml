@@ -65,7 +65,7 @@
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_dialog_map"
                         android:contentDescription="Postas"
-                        android:tint="@color/primary" />
+                        app:tint="@color/primary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -114,7 +114,7 @@
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_sort_by_size"
                         android:contentDescription="Especialidades"
-                        android:tint="@color/accent" />
+                        app:tint="@color/accent" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -163,7 +163,7 @@
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_my_calendar"
                         android:contentDescription="Personal Médico"
-                        android:tint="@color/primary_light" />
+                        app:tint="@color/primary_light" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -212,7 +212,7 @@
                         android:layout_height="48dp"
                         android:src="@android:drawable/ic_menu_recent_history"
                         android:contentDescription="Horarios"
-                        android:tint="@color/warning" />
+                        app:tint="@color/warning" />
 
                     <LinearLayout
                         android:layout_width="0dp"

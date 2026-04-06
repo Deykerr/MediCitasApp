@@ -45,7 +45,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_edit"
             android:contentDescription="Editar"
-            android:tint="@color/primary" />
+            app:tint="@color/primary" />
 
         <ImageButton
             android:id="@+id/btnEliminar"
@@ -54,6 +54,6 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_delete"
             android:contentDescription="Eliminar"
-            android:tint="@color/error" />
+            app:tint="@color/error" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

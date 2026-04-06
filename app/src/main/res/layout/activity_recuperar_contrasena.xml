@@ -25,7 +25,7 @@
                 android:layout_height="72dp"
                 android:src="@android:drawable/ic_dialog_email"
                 android:contentDescription="Icono correo"
-                android:tint="@color/white" />
+                app:tint="@color/white" />
 
             <TextView
                 android:layout_width="wrap_content"

@@ -23,7 +23,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@android:drawable/ic_menu_mapmode"
-            android:tint="@color/primary"
+            app:tint="@color/primary"
             android:contentDescription="Ícono" />
 
         <LinearLayout
@@ -54,7 +54,7 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@android:drawable/ic_media_play"
-            android:tint="@color/text_hint"
+            app:tint="@color/text_hint"
             android:contentDescription="Seleccionar" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

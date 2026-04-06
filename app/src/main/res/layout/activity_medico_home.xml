@@ -65,7 +65,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:contentDescription="Cerrar sesión"
-                android:tint="@color/white" />
+                app:tint="@color/white" />
         </LinearLayout>
 
         <!-- Estadísticas del día -->
@@ -194,7 +194,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_recent_history"
             android:contentDescription="Mis horarios"
-            android:tint="@color/primary" />
+            app:tint="@color/primary" />
     </LinearLayout>
 
     <!-- ProgressBar -->
