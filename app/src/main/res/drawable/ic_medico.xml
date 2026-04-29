@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Doctor coat body -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M12,2C9.79,2 8,3.79 8,6s1.79,4 4,4 4,-1.79 4,-4 -1.79,-4 -4,-4z"/>
+    <!-- Stethoscope cross -->
+    <path
+        android:fillColor="#00BFA5"
+        android:pathData="M13,13h-2v3H8v2h3v3h2v-3h3v-2h-3z"/>
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M12,12c-2.67,0 -8,1.34 -8,4v2h5v-2c0,-0.5 0.1,-1 0.25,-1.46L12,12z"/>
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M12,12c2.67,0 8,1.34 8,4v2h-5v-2c0,-0.5 -0.1,-1 -0.25,-1.46L12,12z"/>
+</vector>

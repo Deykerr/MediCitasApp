@@ -1,6 +1,17 @@
 <resources>
     <string name="app_name">MEDICITAS</string>
 
+    <!-- Pantalla de Bienvenida -->
+    <string name="bienvenida_subtitulo">Tu sistema de citas médicas moderno y confiable</string>
+    <string name="bienvenida_selecciona_rol">Ingresa como</string>
+    <string name="bienvenida_paciente">Paciente</string>
+    <string name="bienvenida_paciente_desc">Gestiona tus citas y consulta tu historial</string>
+    <string name="bienvenida_medico">Personal Médico</string>
+    <string name="bienvenida_medico_desc">Administra tus horarios y atiende pacientes</string>
+    <string name="bienvenida_admin">Administrador</string>
+    <string name="bienvenida_admin_desc">Gestiona el sistema y el personal de salud</string>
+    <string name="bienvenida_footer">© 2026 MEDICITAS · Sistema de Citas Médicas</string>
+
     <!-- Login -->
     <string name="login_titulo">Bienvenido</string>
     <string name="login_subtitulo">Inicia sesión para continuar</string>

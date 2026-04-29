@@ -24,7 +24,7 @@
                 android:id="@+id/ivLogo"
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:src="@mipmap/ic_launcher_round"
+                android:src="@drawable/logo"
                 android:contentDescription="Logo MEDICITAS" />
 
             <TextView
@@ -40,6 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:tag="tvLoginSubtitulo"
                 android:text="@string/login_subtitulo"
                 android:textColor="@color/text_on_primary"
                 android:textSize="14sp"

@@ -17,6 +17,7 @@ import com.ayacucho.medicitas.view.admin.AdminHomeActivity
 import com.ayacucho.medicitas.view.doctor.MedicoHomeActivity
 import com.ayacucho.medicitas.view.patient.PacienteHomeActivity
 import com.ayacucho.medicitas.viewmodel.AuthViewModel
+import com.ayacucho.medicitas.view.auth.BienvenidaActivity
 
 /**
  * Pantalla de Login.
@@ -41,6 +42,17 @@ class LoginActivity : AppCompatActivity() {
         }
 
         authViewModel = ViewModelProvider(this)[AuthViewModel::class.java]
+
+        // Adaptar subtitle según rol seleccionado en BienvenidaActivity
+        val rol = intent.getStringExtra(BienvenidaActivity.EXTRA_ROL)
+        val subtituloRes = when (rol) {
+            BienvenidaActivity.ROL_MEDICO  -> "Ingresa con tu cuenta médica"
+            BienvenidaActivity.ROL_ADMIN   -> "Acceso para administradores"
+            else                           -> getString(R.string.login_subtitulo)
+        }
+        // Buscamos el TextView del subtítulo en la jerarquía de vistas
+        val tvSubtitle = binding.root.findViewWithTag<android.widget.TextView?>("tvLoginSubtitulo")
+        tvSubtitle?.text = subtituloRes
 
         configurarListeners()
         observarEstados()
@@ -92,6 +104,14 @@ class LoginActivity : AppCompatActivity() {
 
         binding.tvCrearCuenta.setOnClickListener {
             startActivity(Intent(this, RegistroActivity::class.java))
+        }
+        
+        binding.tvCrearCuenta.setOnLongClickListener {
+            Toast.makeText(this, "Poblando Base de Datos...", Toast.LENGTH_SHORT).show()
+            com.ayacucho.medicitas.utils.DatabaseSeeder.poblarBaseDeDatos { resultado ->
+                Toast.makeText(this, resultado, Toast.LENGTH_LONG).show()
+            }
+            true
         }
 
         binding.tvOlvidoContrasena.setOnClickListener {

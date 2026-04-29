@@ -11,7 +11,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import com.ayacucho.medicitas.view.admin.AdminHomeActivity
-import com.ayacucho.medicitas.view.auth.LoginActivity
+import com.ayacucho.medicitas.view.auth.BienvenidaActivity
 import com.ayacucho.medicitas.view.doctor.MedicoHomeActivity
 import com.ayacucho.medicitas.view.patient.PacienteHomeActivity
 import com.ayacucho.medicitas.viewmodel.AuthViewModel
@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun irAlLogin() {
-        startActivity(Intent(this, LoginActivity::class.java))
+        startActivity(Intent(this, BienvenidaActivity::class.java))
         finish()
     }
 }

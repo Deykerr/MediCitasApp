@@ -21,6 +21,16 @@ object DateUtils {
     }
 
     /**
+     * Devuelve la fecha de hoy más N días, formateada.
+     */
+    fun sumarDiasAFechaActual(dias: Int): String {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, dias)
+        val sdf = SimpleDateFormat(Constants.FORMATO_FECHA, localePeru)
+        return sdf.format(calendar.time)
+    }
+
+    /**
      * Obtiene la fecha y hora actual formateada como "dd/MM/yyyy HH:mm".
      */
     fun fechaHoraActual(): String {
