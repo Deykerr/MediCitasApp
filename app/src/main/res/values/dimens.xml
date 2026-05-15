@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dimensiones para el tutorial -->
+    <dimen name="tutorial_dot_size">8dp</dimen>
+    <dimen name="tutorial_dot_margin">4dp</dimen>
+</resources>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="16dp"
+    app:cardBackgroundColor="#FFFFFF"
+    android:layout_marginHorizontal="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Fila: Icono + Título + Paso -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Icono en círculo de color primario -->
+            <FrameLayout
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_tutorial_icon_circle">
+
+                <ImageView
+                    android:id="@+id/ivTooltipIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:tint="#FFFFFF"
+                    android:src="@drawable/ic_tutorial_email"
+                    android:contentDescription="Ícono del campo" />
+            </FrameLayout>
+
+            <!-- Título -->
+            <TextView
+                android:id="@+id/tvTooltipTitulo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:text="Título del paso"
+                android:textColor="#1565C0"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- Contador de pasos -->
+            <TextView
+                android:id="@+id/tvTooltipPaso"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="1/5"
+                android:textColor="#9E9E9E"
+                android:textSize="12sp"
+                android:background="@drawable/bg_tutorial_paso_badge"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp" />
+
+        </LinearLayout>
+
+        <!-- Línea divisora decorativa -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_tutorial_divider"
+            android:layout_gravity="start" />
+
+        <!-- Descripción -->
+        <TextView
+            android:id="@+id/tvTooltipDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Descripción del campo"
+            android:textColor="#424242"
+            android:textSize="14sp"
+            android:lineSpacingExtra="3dp" />
+
+        <!-- Indicador de dots (puntos de progreso) -->
+        <LinearLayout
+            android:id="@+id/dotsContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:gravity="center_vertical" />
+
+        <!-- Fila: Omitir + Siguiente -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvTooltipOmitir"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Omitir guía"
+                android:textColor="#9E9E9E"
+                android:textSize="13sp"
+                android:padding="4dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTooltipSiguiente"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Siguiente →"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:paddingHorizontal="20dp"
+                app:cornerRadius="22dp"
+                app:backgroundTint="#1565C0" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
