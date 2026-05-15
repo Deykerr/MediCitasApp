@@ -20,6 +20,7 @@ import com.google.android.material.textfield.TextInputEditText
 
 /**
  * CRUD de Especialidades Médicas (RF06.1).
+ * Incluye gestión de precio de consulta para clínica privada.
  */
 class GestionEspecialidadesActivity : AppCompatActivity() {
 
@@ -49,7 +50,11 @@ class GestionEspecialidadesActivity : AppCompatActivity() {
         recyclerView.adapter = GenericAdapter(listaEspecialidades,
             onBind = { holder, item ->
                 holder.tvNombre.text = item.nombreEspecialidad
-                holder.tvDescripcion.text = item.descripcion.ifBlank { "Sin descripción" }
+                holder.tvDescripcion.text = if (item.precioConsulta > 0) {
+                    "${item.descripcion.ifBlank { "Sin descripción" }} • S/. ${"%.2f".format(item.precioConsulta)}"
+                } else {
+                    item.descripcion.ifBlank { "Sin descripción" }
+                }
             },
             onEdit = { item -> mostrarDialogEspecialidad(item) },
             onDelete = { item ->
@@ -75,11 +80,13 @@ class GestionEspecialidadesActivity : AppCompatActivity() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_especialidad, null)
         val etNombre = dialogView.findViewById<TextInputEditText>(R.id.etNombre)
         val etDescripcion = dialogView.findViewById<TextInputEditText>(R.id.etDescripcion)
+        val etPrecio = dialogView.findViewById<TextInputEditText>(R.id.etPrecioConsulta)
 
         // Si es edición, pre-llenar campos
         especialidad?.let {
             etNombre.setText(it.nombreEspecialidad)
             etDescripcion.setText(it.descripcion)
+            if (it.precioConsulta > 0) etPrecio.setText(it.precioConsulta.toString())
         }
 
         val titulo = if (especialidad == null) "Nueva Especialidad" else "Editar Especialidad"
@@ -90,10 +97,11 @@ class GestionEspecialidadesActivity : AppCompatActivity() {
             .setPositiveButton("Guardar") { _, _ ->
                 val nombre = etNombre.text.toString()
                 val descripcion = etDescripcion.text.toString()
+                val precio = etPrecio.text.toString().toDoubleOrNull() ?: 0.0
                 if (especialidad == null) {
-                    viewModel.agregarEspecialidad(nombre, descripcion)
+                    viewModel.agregarEspecialidad(nombre, descripcion, precio)
                 } else {
-                    viewModel.editarEspecialidad(especialidad.idEspecialidad, nombre, descripcion)
+                    viewModel.editarEspecialidad(especialidad.idEspecialidad, nombre, descripcion, precio)
                 }
             }
             .setNegativeButton("Cancelar", null)
@@ -124,7 +132,7 @@ class GestionEspecialidadesActivity : AppCompatActivity() {
 
 /**
  * RecyclerView Adapter genérico para listas con dos textos y botones editar/eliminar.
- * Reutilizable para Especialidades y Postas.
+ * Reutilizable para Especialidades.
  */
 class GenericAdapter<T>(
     private val items: List<T>,

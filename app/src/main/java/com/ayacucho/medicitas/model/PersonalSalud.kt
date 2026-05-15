@@ -2,7 +2,7 @@ package com.ayacucho.medicitas.model
 
 /**
  * Modelo de datos para el Personal de Salud (Médico).
- * Representa a un profesional médico asignado a una posta y especialidad.
+ * Representa a un profesional médico asignado a una especialidad en la clínica privada.
  *
  * RF03.4: Los pacientes pueden visualizar los médicos asignados a una especialidad.
  * RF05: El médico gestiona su agenda de citas.
@@ -19,7 +19,5 @@ data class PersonalSalud(
     val idEspecialidad: String = "",      // Referencia al documento de Especialidad en Firestore
     val nombreEspecialidad: String = "",  // Desnormalizado para consultas rápidas
     val estado: String = "Activo",       // Activo, Inactivo (RF06.2: desactivar cuentas)
-    val idPosta: String = "",            // Referencia al documento de PostaMedica en Firestore
-    val nombrePosta: String = "",        // Desnormalizado para consultas rápidas
     val rol: String = "Medico"           // Siempre "Medico" para esta entidad (RF01.6)
 )

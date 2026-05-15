@@ -196,4 +196,112 @@ class MedicoRepository {
         citasListener?.remove()
         citasListener = null
     }
+
+    // ==================== PLANES DE TRATAMIENTO ====================
+
+    /**
+     * Crea un plan de tratamiento y genera N sesiones en estado Pendiente.
+     * Se llama cuando el médico marca una cita como Atendida y decide prescribir sesiones.
+     */
+    fun crearPlanTratamiento(
+        cita: com.ayacucho.medicitas.model.CitaMedica,
+        diagnostico: String,
+        descripcionTratamiento: String,
+        totalSesiones: Int,
+        precioPorSesion: Double,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val idPlan = java.util.UUID.randomUUID().toString()
+        val fechaCreacion = com.ayacucho.medicitas.utils.DateUtils.fechaHoraActual()
+
+        val plan = com.ayacucho.medicitas.model.PlanTratamiento(
+            idPlan = idPlan,
+            idPaciente = cita.idPaciente,
+            nombrePaciente = cita.nombrePaciente,
+            dniPaciente = cita.dniPaciente,
+            idMedico = cita.idPersonal,
+            nombreMedico = cita.nombreMedico,
+            idEspecialidad = cita.idEspecialidad,
+            nombreEspecialidad = cita.nombreEspecialidad,
+            diagnostico = diagnostico,
+            descripcionTratamiento = descripcionTratamiento,
+            totalSesiones = totalSesiones,
+            sesionesCompletadas = 0,
+            precioPorSesion = precioPorSesion,
+            estado = com.ayacucho.medicitas.utils.Constants.ESTADO_TRATAMIENTO_ACTIVO,
+            fechaCreacion = fechaCreacion,
+            idCitaOrigen = cita.idCita
+        )
+
+        val batch = db.batch()
+
+        // Guardar el plan
+        val planRef = db.collection(com.ayacucho.medicitas.utils.Constants.COLLECTION_TRATAMIENTOS).document(idPlan)
+        batch.set(planRef, plan)
+
+        // Crear las N sesiones en estado Pendiente
+        for (i in 1..totalSesiones) {
+            val idSesion = java.util.UUID.randomUUID().toString()
+            val sesion = com.ayacucho.medicitas.model.SesionTratamiento(
+                idSesion = idSesion,
+                idPlan = idPlan,
+                numeroSesion = i,
+                estado = com.ayacucho.medicitas.utils.Constants.ESTADO_SESION_PENDIENTE,
+                idMedico = cita.idPersonal,
+                nombreMedico = cita.nombreMedico,
+                idPaciente = cita.idPaciente,
+                nombrePaciente = cita.nombrePaciente,
+                nombreEspecialidad = cita.nombreEspecialidad
+            )
+            val sesionRef = db.collection(com.ayacucho.medicitas.utils.Constants.COLLECTION_SESIONES).document(idSesion)
+            batch.set(sesionRef, sesion)
+        }
+
+        batch.commit()
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al crear plan de tratamiento")
+            }
+    }
+
+    /**
+     * Marca una sesión como Atendida y actualiza el contador del plan.
+     */
+    fun marcarSesionAtendida(
+        idSesion: String,
+        idPlan: String,
+        notas: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val batch = db.batch()
+
+        val sesionRef = db.collection(com.ayacucho.medicitas.utils.Constants.COLLECTION_SESIONES).document(idSesion)
+        batch.update(sesionRef, mapOf(
+            "estado" to com.ayacucho.medicitas.utils.Constants.ESTADO_SESION_ATENDIDA,
+            "notas" to notas
+        ))
+
+        val planRef = db.collection(com.ayacucho.medicitas.utils.Constants.COLLECTION_TRATAMIENTOS).document(idPlan)
+        batch.update(planRef, "sesionesCompletadas", com.google.firebase.firestore.FieldValue.increment(1))
+
+        batch.commit()
+            .addOnSuccessListener {
+                // Verificar si se completaron todas las sesiones
+                db.collection(com.ayacucho.medicitas.utils.Constants.COLLECTION_TRATAMIENTOS).document(idPlan).get()
+                    .addOnSuccessListener { doc ->
+                        val total = doc.getLong("totalSesiones")?.toInt() ?: 0
+                        val completadas = doc.getLong("sesionesCompletadas")?.toInt() ?: 0
+                        if (completadas >= total) {
+                            doc.reference.update("estado", com.ayacucho.medicitas.utils.Constants.ESTADO_TRATAMIENTO_COMPLETADO)
+                        }
+                    }
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al actualizar sesión")
+            }
+    }
 }
+

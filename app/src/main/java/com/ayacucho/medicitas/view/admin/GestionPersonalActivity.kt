@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ayacucho.medicitas.R
 import com.ayacucho.medicitas.model.Especialidad
 import com.ayacucho.medicitas.model.PersonalSalud
-import com.ayacucho.medicitas.model.PostaMedica
 import com.ayacucho.medicitas.viewmodel.AdminViewModel
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -26,7 +25,8 @@ import com.google.android.material.textfield.TextInputEditText
 /**
  * Gestión de Personal Médico (RF06.2).
  * Permite registrar doctores con cuenta Firebase Auth + Firestore,
- * seleccionando su especialidad y posta desde Spinners.
+ * seleccionando su especialidad desde un Spinner.
+ * Adaptado para clínica privada (sin selector de posta).
  */
 class GestionPersonalActivity : AppCompatActivity() {
 
@@ -37,7 +37,6 @@ class GestionPersonalActivity : AppCompatActivity() {
 
     private val listaPersonal = mutableListOf<PersonalSalud>()
     private var listaEspecialidades = listOf<Especialidad>()
-    private var listaPostas = listOf<PostaMedica>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,15 +68,14 @@ class GestionPersonalActivity : AppCompatActivity() {
 
         observarEstados()
 
-        // Cargar datos necesarios para los Spinners
+        // Cargar datos necesarios para el Spinner de especialidades
         viewModel.cargarEspecialidades()
-        viewModel.cargarPostas()
         viewModel.cargarPersonalMedico()
     }
 
     private fun mostrarDialogRegistro() {
-        if (listaEspecialidades.isEmpty() || listaPostas.isEmpty()) {
-            Toast.makeText(this, "Primero registra al menos una especialidad y una posta", Toast.LENGTH_LONG).show()
+        if (listaEspecialidades.isEmpty()) {
+            Toast.makeText(this, "Primero registra al menos una especialidad", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -88,23 +86,17 @@ class GestionPersonalActivity : AppCompatActivity() {
         val etCorreo = dialogView.findViewById<TextInputEditText>(R.id.etCorreo)
         val etContrasena = dialogView.findViewById<TextInputEditText>(R.id.etContrasena)
         val spinnerEspecialidad = dialogView.findViewById<Spinner>(R.id.spinnerEspecialidad)
-        val spinnerPosta = dialogView.findViewById<Spinner>(R.id.spinnerPosta)
 
-        // Llenar Spinners (Paso 4)
+        // Llenar Spinner de especialidades
         val nombresEspecialidades = listaEspecialidades.map { it.nombreEspecialidad }
         spinnerEspecialidad.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, nombresEspecialidades)
-
-        val nombresPostas = listaPostas.map { it.nombrePosta }
-        spinnerPosta.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, nombresPostas)
 
         AlertDialog.Builder(this)
             .setTitle("Registrar Médico")
             .setView(dialogView)
             .setPositiveButton("Registrar") { _, _ ->
                 val posEsp = spinnerEspecialidad.selectedItemPosition
-                val posPosta = spinnerPosta.selectedItemPosition
                 val especialidadSeleccionada = listaEspecialidades[posEsp]
-                val postaSeleccionada = listaPostas[posPosta]
 
                 viewModel.registrarMedico(
                     context = this,
@@ -114,9 +106,7 @@ class GestionPersonalActivity : AppCompatActivity() {
                     apellidos = etApellidos.text.toString(),
                     dni = etDni.text.toString(),
                     idEspecialidad = especialidadSeleccionada.idEspecialidad,
-                    nombreEspecialidad = especialidadSeleccionada.nombreEspecialidad,
-                    idPosta = postaSeleccionada.idPosta,
-                    nombrePosta = postaSeleccionada.nombrePosta
+                    nombreEspecialidad = especialidadSeleccionada.nombreEspecialidad
                 )
             }
             .setNegativeButton("Cancelar", null)
@@ -143,9 +133,6 @@ class GestionPersonalActivity : AppCompatActivity() {
         viewModel.especialidades.observe(this) { lista ->
             listaEspecialidades = lista
         }
-        viewModel.postas.observe(this) { lista ->
-            listaPostas = lista
-        }
     }
 }
 
@@ -160,7 +147,6 @@ class PersonalAdapter(
         val tvNombre: TextView = view.findViewById(R.id.tvNombreMedico)
         val tvDni: TextView = view.findViewById(R.id.tvDniMedico)
         val tvEspecialidad: TextView = view.findViewById(R.id.tvEspecialidadMedico)
-        val tvPosta: TextView = view.findViewById(R.id.tvPostaMedico)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -173,7 +159,6 @@ class PersonalAdapter(
         holder.tvNombre.text = "${medico.nombres} ${medico.apellidos}"
         holder.tvDni.text = "DNI: ${medico.dni}"
         holder.tvEspecialidad.text = medico.nombreEspecialidad.ifBlank { "Sin especialidad" }
-        holder.tvPosta.text = medico.nombrePosta.ifBlank { "Sin posta" }
         holder.itemView.findViewById<View>(R.id.btnDesactivar).setOnClickListener {
             onDesactivar(medico)
         }

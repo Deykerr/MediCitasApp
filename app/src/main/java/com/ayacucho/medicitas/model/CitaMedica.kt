@@ -2,7 +2,7 @@ package com.ayacucho.medicitas.model
 
 /**
  * Modelo de datos para la Cita Médica.
- * Representa una reserva de atención médica hecha por un paciente.
+ * Representa una reserva de atención médica hecha por un paciente en la clínica privada.
  *
  * RF04.1: Confirmar reserva en horario disponible.
  * RF04.2: Validar disponibilidad antes de confirmar.
@@ -30,9 +30,12 @@ data class CitaMedica(
     val dniPaciente: String = "",        // Desnormalizado para que el médico lo vea (RF05.2)
     val idPersonal: String = "",         // Referencia al médico
     val nombreMedico: String = "",       // Desnormalizado para el comprobante (RF04.4)
-    val idPosta: String = "",            // Referencia a la posta médica
-    val nombrePosta: String = "",        // Desnormalizado para el comprobante (RF04.4)
     val idEspecialidad: String = "",     // Referencia a la especialidad
     val nombreEspecialidad: String = "", // Desnormalizado para el comprobante (RF04.4)
-    val fechaCreacion: String = ""       // Fecha y hora de creación de la reserva
+    val fechaCreacion: String = "",      // Fecha y hora de creación de la reserva
+    // Campos de pago (Clínica Privada)
+    val montoPago: Double = 0.0,         // Monto cobrado por la consulta
+    val estadoPago: String = "Pendiente", // "Pendiente", "Pagado", "Reembolsado"
+    val metodoPago: String = "",         // "Visa", "Mastercard", "Efectivo"
+    val referenciaPago: String = ""      // Código de transacción simulado
 )

@@ -3,6 +3,7 @@ package com.ayacucho.medicitas.utils
 /**
  * Constantes globales del sistema MEDICITAS.
  * Centraliza valores reutilizables para evitar "magic strings" en el código.
+ * Adaptado para clínica privada.
  */
 object Constants {
 
@@ -10,7 +11,6 @@ object Constants {
     const val COLLECTION_PACIENTES = "pacientes"
     const val COLLECTION_PERSONAL_SALUD = "personal_salud"
     const val COLLECTION_ADMINISTRADORES = "administradores"
-    const val COLLECTION_POSTAS = "postas_medicas"
     const val COLLECTION_ESPECIALIDADES = "especialidades"
     const val COLLECTION_HORARIOS = "horarios"
     const val COLLECTION_CITAS = "citas_medicas"
@@ -34,6 +34,30 @@ object Constants {
     // ==================== Estados de Horario (RF05.5) ====================
     const val ESTADO_HORARIO_DISPONIBLE = "Disponible"
     const val ESTADO_HORARIO_BLOQUEADO = "Bloqueado"
+
+    // ==================== Estados de Pago (Clínica Privada) ====================
+    const val ESTADO_PAGO_PENDIENTE = "Pendiente"
+    const val ESTADO_PAGO_PAGADO = "Pagado"
+    const val ESTADO_PAGO_REEMBOLSADO = "Reembolsado"
+
+    // ==================== Tratamientos y Sesiones ====================
+    const val COLLECTION_TRATAMIENTOS = "tratamientos"
+    const val COLLECTION_SESIONES = "sesiones_tratamiento"
+
+    // Estados de Tratamiento
+    const val ESTADO_TRATAMIENTO_ACTIVO = "Activo"
+    const val ESTADO_TRATAMIENTO_COMPLETADO = "Completado"
+    const val ESTADO_TRATAMIENTO_CANCELADO = "Cancelado"
+
+    // Estados de Sesión
+    const val ESTADO_SESION_PENDIENTE = "Pendiente"
+    const val ESTADO_SESION_AGENDADA = "Agendada"
+    const val ESTADO_SESION_ATENDIDA = "Atendida"
+    const val ESTADO_SESION_NO_ASISTIO = "No Asistio"
+    const val ESTADO_SESION_CANCELADA = "Cancelada"
+
+    // Duración por defecto de un slot de cita (en minutos)
+    const val DURACION_CITA_DEFAULT = 30
 
     // ==================== Estados de Lectura de Notificación ====================
     const val NOTIFICACION_LEIDA = "Leido"

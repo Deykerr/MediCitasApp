@@ -44,7 +44,6 @@ class MedicoHomeActivity : AppCompatActivity() {
     // Vistas
     private lateinit var tvSaludo: TextView
     private lateinit var tvEspecialidad: TextView
-    private lateinit var tvPosta: TextView
     private lateinit var tvTotalCitas: TextView
     private lateinit var tvPendientes: TextView
     private lateinit var tvAtendidas: TextView
@@ -81,7 +80,6 @@ class MedicoHomeActivity : AppCompatActivity() {
     private fun inicializarVistas() {
         tvSaludo = findViewById(R.id.tvSaludo)
         tvEspecialidad = findViewById(R.id.tvEspecialidad)
-        tvPosta = findViewById(R.id.tvPosta)
         tvTotalCitas = findViewById(R.id.tvTotalCitas)
         tvPendientes = findViewById(R.id.tvPendientes)
         tvAtendidas = findViewById(R.id.tvAtendidas)
@@ -112,6 +110,9 @@ class MedicoHomeActivity : AppCompatActivity() {
                     .setMessage("¿CANCELAR la cita de ${cita.nombrePaciente}?")
                     .setPositiveButton("Sí") { _, _ -> viewModel.marcarComoCancelada(cita.idCita) }
                     .setNegativeButton("No", null).show()
+            },
+            onCrearTratamiento = { cita ->
+                mostrarDialogTratamiento(cita)
             }
         )
 
@@ -120,6 +121,46 @@ class MedicoHomeActivity : AppCompatActivity() {
 
         // Mostrar fecha de hoy en el botón
         btnFecha.text = DateUtils.fechaActual()
+    }
+
+    /**
+     * Muestra el diálogo para crear un plan de tratamiento por sesiones.
+     */
+    private fun mostrarDialogTratamiento(cita: CitaMedica) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_plan_tratamiento, null)
+        val etDiagnostico = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDiagnostico)
+        val etDescripcion = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDescripcionTratamiento)
+        val etSesiones = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etTotalSesiones)
+        val etPrecio = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etPrecioPorSesion)
+        val tvResumen = dialogView.findViewById<TextView>(R.id.tvResumenTratamiento)
+
+        // Calcular costo total dinámicamente
+        val watcher = object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val sesiones = etSesiones.text.toString().toIntOrNull() ?: 0
+                val precio = etPrecio.text.toString().toDoubleOrNull() ?: 0.0
+                val total = sesiones * precio
+                tvResumen.text = "Costo total estimado: S/. ${"%.2f".format(total)} ($sesiones sesiones × S/. ${"%.2f".format(precio)})"
+            }
+        }
+        etSesiones.addTextChangedListener(watcher)
+        etPrecio.addTextChangedListener(watcher)
+
+        AlertDialog.Builder(this)
+            .setTitle("Plan de Tratamiento — ${cita.nombrePaciente}")
+            .setView(dialogView)
+            .setPositiveButton("Crear Plan") { _, _ ->
+                val diagnostico = etDiagnostico.text.toString()
+                val descripcion = etDescripcion.text.toString()
+                val sesiones = etSesiones.text.toString().toIntOrNull() ?: 0
+                val precio = etPrecio.text.toString().toDoubleOrNull() ?: 0.0
+
+                viewModel.crearPlanTratamiento(cita, diagnostico, descripcion, sesiones, precio)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun configurarListeners() {
@@ -157,7 +198,6 @@ class MedicoHomeActivity : AppCompatActivity() {
         viewModel.datosMedico.observe(this) { medico ->
             tvSaludo.text = "Dr. ${medico.nombres} ${medico.apellidos}"
             tvEspecialidad.text = medico.nombreEspecialidad
-            tvPosta.text = medico.nombrePosta
         }
 
         // Loading
@@ -196,7 +236,8 @@ class CitasMedicoAdapter(
     private val citas: List<CitaMedica>,
     private val onAtendida: (CitaMedica) -> Unit,
     private val onNoAsistio: (CitaMedica) -> Unit,
-    private val onCancelar: (CitaMedica) -> Unit
+    private val onCancelar: (CitaMedica) -> Unit,
+    private val onCrearTratamiento: (CitaMedica) -> Unit
 ) : RecyclerView.Adapter<CitasMedicoAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -210,6 +251,7 @@ class CitasMedicoAdapter(
         val btnCancelar: MaterialButton = view.findViewById(R.id.btnCancelar)
         val layoutAcciones: View = view.findViewById(R.id.layoutAcciones)
         val dividerAcciones: View = view.findViewById(R.id.dividerAcciones)
+        val btnCrearTratamiento: MaterialButton = view.findViewById(R.id.btnCrearTratamiento)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -235,10 +277,15 @@ class CitasMedicoAdapter(
         holder.layoutAcciones.visibility = if (esPendiente) View.VISIBLE else View.GONE
         holder.dividerAcciones.visibility = if (esPendiente) View.VISIBLE else View.GONE
 
+        // Botón crear tratamiento: solo visible en citas Atendidas
+        val esAtendida = cita.estadoCita == Constants.ESTADO_CITA_ATENDIDA
+        holder.btnCrearTratamiento.visibility = if (esAtendida) View.VISIBLE else View.GONE
+
         // Listeners de los botones
         holder.btnAtendida.setOnClickListener { onAtendida(cita) }
         holder.btnNoAsistio.setOnClickListener { onNoAsistio(cita) }
         holder.btnCancelar.setOnClickListener { onCancelar(cita) }
+        holder.btnCrearTratamiento.setOnClickListener { onCrearTratamiento(cita) }
     }
 
     private fun configurarEstado(tvEstado: TextView, estado: String) {
@@ -262,3 +309,4 @@ class CitasMedicoAdapter(
 
     override fun getItemCount() = citas.size
 }
+

@@ -30,6 +30,7 @@ import java.util.Locale
 /**
  * Gestión de Horarios de Atención (RF06.3).
  * Permite asignar bloques horarios a los médicos con DatePicker y TimePicker.
+ * Adaptado para clínica privada (sin referencia a postas).
  */
 class GestionHorariosActivity : AppCompatActivity() {
 
@@ -87,11 +88,47 @@ class GestionHorariosActivity : AppCompatActivity() {
         val etFecha = dialogView.findViewById<TextInputEditText>(R.id.etFecha)
         val etHoraInicio = dialogView.findViewById<TextInputEditText>(R.id.etHoraInicio)
         val etHoraFin = dialogView.findViewById<TextInputEditText>(R.id.etHoraFin)
-        val etCupos = dialogView.findViewById<TextInputEditText>(R.id.etCupos)
+        val etDuracionCita = dialogView.findViewById<TextInputEditText>(R.id.etDuracionCita)
+        val tvSlotsInfo = dialogView.findViewById<android.widget.TextView>(R.id.tvSlotsInfo)
 
         // Spinner de médicos
         val nombresMedicos = listaPersonal.map { "${it.nombres} ${it.apellidos}" }
         spinnerMedico.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, nombresMedicos)
+
+        // Función para calcular y mostrar slots
+        fun actualizarInfoSlots() {
+            val inicio = etHoraInicio.text.toString()
+            val fin = etHoraFin.text.toString()
+            val duracion = etDuracionCita.text.toString().toIntOrNull() ?: 0
+            if (inicio.isNotBlank() && fin.isNotBlank() && duracion > 0) {
+                try {
+                    val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                    val tInicio = sdf.parse(inicio)
+                    val tFin = sdf.parse(fin)
+                    if (tInicio != null && tFin != null) {
+                        val totalMin = ((tFin.time - tInicio.time) / 60000).toInt()
+                        if (totalMin > 0) {
+                            val slots = totalMin / duracion
+                            tvSlotsInfo.text = "Se crearán $slots slots de $duracion min cada uno"
+                        } else {
+                            tvSlotsInfo.text = "La hora fin debe ser mayor a la hora inicio"
+                        }
+                    }
+                } catch (e: Exception) {
+                    tvSlotsInfo.text = "Complete los horarios"
+                }
+            } else {
+                tvSlotsInfo.text = "Complete los horarios y duración"
+            }
+        }
+
+        // Listeners para recalcular slots
+        val watcher = object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { actualizarInfoSlots() }
+        }
+        etDuracionCita.addTextChangedListener(watcher)
 
         // DatePicker para Fecha
         etFecha.setOnClickListener {
@@ -106,6 +143,7 @@ class GestionHorariosActivity : AppCompatActivity() {
         etHoraInicio.setOnClickListener {
             TimePickerDialog(this, { _, hour, minute ->
                 etHoraInicio.setText(String.format("%02d:%02d", hour, minute))
+                actualizarInfoSlots()
             }, 8, 0, true).show()
         }
 
@@ -113,6 +151,7 @@ class GestionHorariosActivity : AppCompatActivity() {
         etHoraFin.setOnClickListener {
             TimePickerDialog(this, { _, hour, minute ->
                 etHoraFin.setText(String.format("%02d:%02d", hour, minute))
+                actualizarInfoSlots()
             }, 14, 0, true).show()
         }
 
@@ -133,16 +172,15 @@ class GestionHorariosActivity : AppCompatActivity() {
                     diasSemana[cal.get(Calendar.DAY_OF_WEEK) - 1]
                 } catch (e: Exception) { "" }
 
-                val cupos = etCupos.text.toString().toIntOrNull() ?: 0
+                val duracion = etDuracionCita.text.toString().toIntOrNull() ?: 30
 
                 viewModel.agregarHorario(
                     fecha = fecha,
                     dia = dia,
                     horaInicio = etHoraInicio.text.toString(),
                     horaFin = etHoraFin.text.toString(),
-                    cuposTotales = cupos,
-                    idPersonal = medicoSeleccionado.idPersonal,
-                    idPosta = medicoSeleccionado.idPosta
+                    duracionCitaMinutos = duracion,
+                    idPersonal = medicoSeleccionado.idPersonal
                 )
             }
             .setNegativeButton("Cancelar", null)

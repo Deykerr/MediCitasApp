@@ -207,6 +207,52 @@ class MedicoViewModel : ViewModel() {
 
     fun limpiarMensaje() { _mensaje.value = null }
 
+    // ==================== PLANES DE TRATAMIENTO ====================
+
+    private val _planCreado = MutableLiveData<Boolean>()
+    val planCreado: LiveData<Boolean> = _planCreado
+
+    fun crearPlanTratamiento(
+        cita: com.ayacucho.medicitas.model.CitaMedica,
+        diagnostico: String,
+        descripcionTratamiento: String,
+        totalSesiones: Int,
+        precioPorSesion: Double
+    ) {
+        if (diagnostico.isBlank()) {
+            _mensaje.value = "El diagnóstico es obligatorio"
+            return
+        }
+        if (totalSesiones <= 0) {
+            _mensaje.value = "Debe indicar al menos 1 sesión"
+            return
+        }
+        if (precioPorSesion <= 0) {
+            _mensaje.value = "El precio por sesión debe ser mayor a 0"
+            return
+        }
+
+        _isLoading.value = true
+        medicoRepository.crearPlanTratamiento(
+            cita = cita,
+            diagnostico = diagnostico.trim(),
+            descripcionTratamiento = descripcionTratamiento.trim(),
+            totalSesiones = totalSesiones,
+            precioPorSesion = precioPorSesion,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Plan de tratamiento creado con $totalSesiones sesiones"
+                _planCreado.value = true
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun planCreadoCompletado() { _planCreado.value = false }
+
     fun cerrarSesion() {
         medicoRepository.detenerEscuchaCitas()
         auth.signOut()
@@ -217,3 +263,4 @@ class MedicoViewModel : ViewModel() {
         medicoRepository.detenerEscuchaCitas()
     }
 }
+

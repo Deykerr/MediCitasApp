@@ -16,7 +16,8 @@ import com.google.firebase.auth.FirebaseAuth
 
 /**
  * Panel de Administración (Dashboard).
- * Pantalla principal del administrador con acceso a todas las secciones CRUD.
+ * Pantalla principal del administrador con acceso a las secciones CRUD.
+ * Adaptado para clínica privada (sin gestión de postas).
  * RF06: Mantenimiento del Sistema.
  */
 class AdminHomeActivity : AppCompatActivity() {
@@ -33,10 +34,6 @@ class AdminHomeActivity : AppCompatActivity() {
         }
 
         // Navegación a las secciones CRUD
-        findViewById<MaterialCardView>(R.id.cardPostas).setOnClickListener {
-            startActivity(Intent(this, GestionPostasActivity::class.java))
-        }
-
         findViewById<MaterialCardView>(R.id.cardEspecialidades).setOnClickListener {
             startActivity(Intent(this, GestionEspecialidadesActivity::class.java))
         }

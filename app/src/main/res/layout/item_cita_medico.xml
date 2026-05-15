@@ -137,5 +137,23 @@
                 app:iconSize="16dp"
                 app:rippleColor="@color/error" />
         </LinearLayout>
+
+        <!-- Botón Crear Tratamiento (visible en citas Atendidas) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCrearTratamiento"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:text="📋 Crear Plan de Tratamiento"
+            android:textAllCaps="false"
+            android:textSize="13sp"
+            android:textColor="@color/primary"
+            android:visibility="gone"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/primary"
+            app:icon="@android:drawable/ic_menu_agenda"
+            app:iconTint="@color/primary"
+            app:iconSize="18dp" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

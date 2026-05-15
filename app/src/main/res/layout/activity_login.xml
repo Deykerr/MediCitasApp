@@ -20,12 +20,21 @@
             android:orientation="vertical"
             android:paddingHorizontal="32dp">
 
-            <ImageView
-                android:id="@+id/ivLogo"
+            <androidx.cardview.widget.CardView
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:src="@drawable/logo"
-                android:contentDescription="Logo MEDICITAS" />
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                android:layout_gravity="center"
+                app:cardBackgroundColor="@android:color/transparent">
+
+                <ImageView
+                    android:id="@+id/ivLogo"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/logo"
+                    android:contentDescription="Logo MEDICITAS" />
+            </androidx.cardview.widget.CardView>
 
             <TextView
                 android:layout_width="wrap_content"

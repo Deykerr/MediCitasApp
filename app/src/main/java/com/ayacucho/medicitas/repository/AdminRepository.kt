@@ -12,12 +12,12 @@ import java.util.UUID
 /**
  * Repositorio del Administrador.
  * Encapsula toda la comunicación con Firestore para las operaciones CRUD
- * de Especialidades, Postas, Personal Médico y Horarios.
+ * de Especialidades, Personal Médico y Horarios.
+ * Adaptado para clínica privada (sin postas).
  *
- * RF06.1: CRUD Especialidades
+ * RF06.1: CRUD Especialidades (con precio)
  * RF06.2: CRUD Personal Médico
  * RF06.3: Configurar horarios
- * RF06.5: CRUD Postas Médicas
  */
 class AdminRepository {
 
@@ -26,7 +26,7 @@ class AdminRepository {
     // ==================== ESPECIALIDADES (RF06.1) ====================
 
     fun agregarEspecialidad(
-        nombre: String, descripcion: String,
+        nombre: String, descripcion: String, precioConsulta: Double,
         onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
         val id = UUID.randomUUID().toString()
@@ -34,7 +34,8 @@ class AdminRepository {
             idEspecialidad = id,
             nombreEspecialidad = nombre,
             descripcion = descripcion,
-            estado = Constants.ESTADO_ACTIVO
+            estado = Constants.ESTADO_ACTIVO,
+            precioConsulta = precioConsulta
         )
         db.collection(Constants.COLLECTION_ESPECIALIDADES).document(id).set(nueva)
             .addOnSuccessListener { onSuccess() }
@@ -55,12 +56,13 @@ class AdminRepository {
     }
 
     fun editarEspecialidad(
-        id: String, nombre: String, descripcion: String,
+        id: String, nombre: String, descripcion: String, precioConsulta: Double,
         onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
         val datos = mapOf(
             "nombreEspecialidad" to nombre,
-            "descripcion" to descripcion
+            "descripcion" to descripcion,
+            "precioConsulta" to precioConsulta
         )
         db.collection(Constants.COLLECTION_ESPECIALIDADES).document(id).update(datos)
             .addOnSuccessListener { onSuccess() }
@@ -77,63 +79,6 @@ class AdminRepository {
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al eliminar especialidad") }
     }
 
-    // ==================== POSTAS MÉDICAS (RF06.5) ====================
-
-    fun agregarPosta(
-        nombre: String, direccion: String, distrito: String, telefono: String,
-        onSuccess: () -> Unit, onFailure: (String) -> Unit
-    ) {
-        val id = UUID.randomUUID().toString()
-        val nueva = PostaMedica(
-            idPosta = id,
-            nombrePosta = nombre,
-            direccion = direccion,
-            distrito = distrito,
-            telefono = telefono,
-            estado = Constants.ESTADO_ACTIVO
-        )
-        db.collection(Constants.COLLECTION_POSTAS).document(id).set(nueva)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al agregar posta") }
-    }
-
-    fun obtenerPostas(
-        onSuccess: (List<PostaMedica>) -> Unit, onFailure: (String) -> Unit
-    ) {
-        db.collection(Constants.COLLECTION_POSTAS)
-            .whereEqualTo("estado", Constants.ESTADO_ACTIVO)
-            .get()
-            .addOnSuccessListener { result ->
-                val lista = result.toObjects(PostaMedica::class.java)
-                onSuccess(lista)
-            }
-            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al obtener postas") }
-    }
-
-    fun editarPosta(
-        id: String, nombre: String, direccion: String, distrito: String, telefono: String,
-        onSuccess: () -> Unit, onFailure: (String) -> Unit
-    ) {
-        val datos = mapOf(
-            "nombrePosta" to nombre,
-            "direccion" to direccion,
-            "distrito" to distrito,
-            "telefono" to telefono
-        )
-        db.collection(Constants.COLLECTION_POSTAS).document(id).update(datos)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al editar posta") }
-    }
-
-    fun eliminarPosta(
-        id: String, onSuccess: () -> Unit, onFailure: (String) -> Unit
-    ) {
-        db.collection(Constants.COLLECTION_POSTAS).document(id)
-            .update("estado", Constants.ESTADO_INACTIVO)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al eliminar posta") }
-    }
-
     // ==================== PERSONAL MÉDICO (RF06.2) ====================
 
     /**
@@ -147,7 +92,6 @@ class AdminRepository {
         correo: String, contrasena: String,
         nombres: String, apellidos: String, dni: String,
         idEspecialidad: String, nombreEspecialidad: String,
-        idPosta: String, nombrePosta: String,
         onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
         // Crear instancia secundaria de Firebase para no cerrar sesión del admin
@@ -188,8 +132,6 @@ class AdminRepository {
                     idEspecialidad = idEspecialidad,
                     nombreEspecialidad = nombreEspecialidad,
                     estado = Constants.ESTADO_ACTIVO,
-                    idPosta = idPosta,
-                    nombrePosta = nombrePosta,
                     rol = Constants.ROL_MEDICO
                 )
 
@@ -235,9 +177,16 @@ class AdminRepository {
 
     fun agregarHorario(
         fecha: String, dia: String, horaInicio: String, horaFin: String,
-        cuposTotales: Int, idPersonal: String, idPosta: String,
+        duracionCitaMinutos: Int, idPersonal: String,
         onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
+        // Calcular cupos automáticamente a partir de la duración
+        val cuposCalculados = calcularSlots(horaInicio, horaFin, duracionCitaMinutos)
+        if (cuposCalculados <= 0) {
+            onFailure("No se pueden crear slots con los horarios indicados")
+            return
+        }
+
         val id = UUID.randomUUID().toString()
         val nuevo = Horario(
             idHorario = id,
@@ -245,15 +194,31 @@ class AdminRepository {
             dia = dia,
             horaInicio = horaInicio,
             horaFin = horaFin,
-            cuposDisponibles = cuposTotales,
-            cuposTotales = cuposTotales,
+            duracionCitaMinutos = duracionCitaMinutos,
+            cuposDisponibles = cuposCalculados,
+            cuposTotales = cuposCalculados,
             estado = Constants.ESTADO_HORARIO_DISPONIBLE,
-            idPersonal = idPersonal,
-            idPosta = idPosta
+            idPersonal = idPersonal
         )
         db.collection(Constants.COLLECTION_HORARIOS).document(id).set(nuevo)
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al agregar horario") }
+    }
+
+    /**
+     * Calcula la cantidad de slots de cita en un bloque horario.
+     * Ej: 08:00 a 12:00 con duración de 30 min = 8 slots.
+     */
+    private fun calcularSlots(horaInicio: String, horaFin: String, duracionMinutos: Int): Int {
+        return try {
+            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            val inicio = sdf.parse(horaInicio)
+            val fin = sdf.parse(horaFin)
+            if (inicio == null || fin == null || duracionMinutos <= 0) return 0
+            val totalMinutos = ((fin.time - inicio.time) / 60000).toInt()
+            if (totalMinutos <= 0) return 0
+            totalMinutos / duracionMinutos
+        } catch (e: Exception) { 0 }
     }
 
     fun obtenerHorarios(

@@ -45,16 +45,6 @@
                     android:textColor="@color/text_on_primary"
                     android:textSize="13sp"
                     android:alpha="0.85" />
-
-                <TextView
-                    android:id="@+id/tvPosta"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Posta"
-                    android:textColor="@color/text_on_primary"
-                    android:textSize="12sp"
-                    android:alpha="0.7" />
             </LinearLayout>
 
             <!-- Botón cerrar sesión -->

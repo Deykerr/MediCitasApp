@@ -59,6 +59,10 @@ class PacienteHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, MisCitasActivity::class.java))
         }
 
+        findViewById<MaterialCardView>(R.id.cardMisTratamientos).setOnClickListener {
+            startActivity(Intent(this, MisTratamientosActivity::class.java))
+        }
+
         findViewById<MaterialCardView>(R.id.cardMiPerfil).setOnClickListener {
             startActivity(Intent(this, MiPerfilActivity::class.java))
         }
@@ -87,7 +91,7 @@ class PacienteHomeActivity : AppCompatActivity() {
                 val notifHelper = NotificationHelper(this)
                 notifHelper.mostrarNotificacion(
                     "Cita Cancelada",
-                    "Tu cita en ${cita.nombrePosta} el ${cita.fecha} a las ${cita.hora} ha sido CANCELADA.",
+                    "Tu cita de ${cita.nombreEspecialidad} el ${cita.fecha} a las ${cita.hora} ha sido CANCELADA. Pago reembolsado.",
                     3
                 )
             }

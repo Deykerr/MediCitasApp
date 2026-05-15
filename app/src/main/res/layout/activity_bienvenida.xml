@@ -16,13 +16,21 @@
         android:paddingBottom="40dp">
 
         <!-- Logo Section -->
-        <ImageView
-            android:id="@+id/ivLogoWelcome"
+        <androidx.cardview.widget.CardView
             android:layout_width="96dp"
             android:layout_height="96dp"
-            android:src="@drawable/logo"
-            android:contentDescription="Logo MEDICITAS"
-            android:elevation="4dp" />
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_gravity="center"
+            app:cardBackgroundColor="@android:color/transparent">
+
+            <ImageView
+                android:id="@+id/ivLogoWelcome"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/logo"
+                android:contentDescription="Logo MEDICITAS" />
+        </androidx.cardview.widget.CardView>
 
         <!-- App Name -->
         <TextView

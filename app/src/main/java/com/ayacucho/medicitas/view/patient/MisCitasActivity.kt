@@ -25,7 +25,8 @@ import com.google.android.material.tabs.TabLayout
 /**
  * Historial de Citas del Paciente (RF04.5).
  * Tabs: "Próximas" y "Pasadas".
- * Permite cancelar citas próximas (RF04.6).
+ * Permite cancelar citas próximas con reembolso (RF04.6).
+ * Muestra monto y estado de pago en cada cita.
  */
 class MisCitasActivity : AppCompatActivity() {
 
@@ -56,7 +57,7 @@ class MisCitasActivity : AppCompatActivity() {
         rvCitas.adapter = CitasPacienteAdapter(listaActual, mostraPendientes) { cita ->
             AlertDialog.Builder(this)
                 .setTitle("Cancelar Cita")
-                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?")
+                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?\n\nSe realizará el reembolso de S/. ${"%.2f".format(cita.montoPago)}")
                 .setPositiveButton("Sí, cancelar") { _, _ -> viewModel.cancelarCita(cita) }
                 .setNegativeButton("No", null).show()
         }
@@ -88,7 +89,7 @@ class MisCitasActivity : AppCompatActivity() {
         rvCitas.adapter = CitasPacienteAdapter(listaActual, mostraPendientes) { cita ->
             AlertDialog.Builder(this)
                 .setTitle("Cancelar Cita")
-                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?")
+                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?\n\nSe realizará el reembolso de S/. ${"%.2f".format(cita.montoPago)}")
                 .setPositiveButton("Sí, cancelar") { _, _ -> viewModel.cancelarCita(cita) }
                 .setNegativeButton("No", null).show()
         }
@@ -127,7 +128,8 @@ class CitasPacienteAdapter(
         val tvHora: TextView = view.findViewById(R.id.tvHoraCita)
         val tvEspecialidad: TextView = view.findViewById(R.id.tvEspecialidadCita)
         val tvMedico: TextView = view.findViewById(R.id.tvMedicoCita)
-        val tvPosta: TextView = view.findViewById(R.id.tvPostaCita)
+        val tvMontoPago: TextView = view.findViewById(R.id.tvMontoPago)
+        val tvEstadoPago: TextView = view.findViewById(R.id.tvEstadoPago)
         val tvMotivo: TextView = view.findViewById(R.id.tvMotivoCita)
         val btnCancelar: MaterialButton = view.findViewById(R.id.btnCancelar)
     }
@@ -145,11 +147,20 @@ class CitasPacienteAdapter(
         holder.tvHora.text = "🕐 ${cita.hora}"
         holder.tvEspecialidad.text = cita.nombreEspecialidad
         holder.tvMedico.text = "Dr. ${cita.nombreMedico}"
-        holder.tvPosta.text = "📍 ${cita.nombrePosta}"
         holder.tvMotivo.text = if (cita.motivoConsulta.isBlank()) "" else "Motivo: ${cita.motivoConsulta}"
 
-        // Badge de estado
+        // Pago
+        holder.tvMontoPago.text = if (cita.montoPago > 0) {
+            "S/. ${"%.2f".format(cita.montoPago)} (${cita.metodoPago})"
+        } else {
+            ""
+        }
+
+        // Badge de estado de cita
         configurarEstado(holder.tvEstado, cita.estadoCita)
+
+        // Badge de estado de pago
+        configurarEstadoPago(holder.tvEstadoPago, cita.estadoPago)
 
         // Solo mostrar cancelar en citas próximas con estado Reservada
         holder.btnCancelar.visibility = if (mostrarCancelar &&
@@ -164,6 +175,21 @@ class CitasPacienteAdapter(
             Constants.ESTADO_CITA_ATENDIDA -> Pair("#2E7D32", "#E8F5E9")
             Constants.ESTADO_CITA_NO_ASISTIO -> Pair("#E65100", "#FFF3E0")
             Constants.ESTADO_CITA_CANCELADA -> Pair("#C62828", "#FFEBEE")
+            else -> Pair("#757575", "#F5F5F5")
+        }
+        tvEstado.setTextColor(Color.parseColor(textColor))
+        val bg = GradientDrawable()
+        bg.setColor(Color.parseColor(bgColor))
+        bg.cornerRadius = 16f
+        tvEstado.background = bg
+    }
+
+    private fun configurarEstadoPago(tvEstado: TextView, estado: String) {
+        tvEstado.text = estado
+        val (textColor, bgColor) = when (estado) {
+            Constants.ESTADO_PAGO_PAGADO -> Pair("#2E7D32", "#E8F5E9")
+            Constants.ESTADO_PAGO_PENDIENTE -> Pair("#E65100", "#FFF3E0")
+            Constants.ESTADO_PAGO_REEMBOLSADO -> Pair("#6A1B9A", "#F3E5F5")
             else -> Pair("#757575", "#F5F5F5")
         }
         tvEstado.setTextColor(Color.parseColor(textColor))

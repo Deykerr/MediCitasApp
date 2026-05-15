@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
  * ViewModel del Paciente.
  * Conecta las vistas del paciente con el PacienteRepository.
  * Gestiona el flujo de exploración en cascada y la reserva de citas.
+ * Adaptado para clínica privada (sin postas, con pago).
  */
 class PacienteViewModel : ViewModel() {
 
@@ -32,10 +33,7 @@ class PacienteViewModel : ViewModel() {
     private val _datosPaciente = MutableLiveData<Paciente>()
     val datosPaciente: LiveData<Paciente> = _datosPaciente
 
-    // ==================== EXPLORACIÓN EN CASCADA ====================
-
-    private val _postas = MutableLiveData<List<PostaMedica>>()
-    val postas: LiveData<List<PostaMedica>> = _postas
+    // ==================== EXPLORACIÓN EN CASCADA (sin postas) ====================
 
     private val _especialidades = MutableLiveData<List<Especialidad>>()
     val especialidades: LiveData<List<Especialidad>> = _especialidades
@@ -47,9 +45,6 @@ class PacienteViewModel : ViewModel() {
     val horarios: LiveData<List<Horario>> = _horarios
 
     // Selecciones actuales del paso a paso
-    private val _postaSeleccionada = MutableLiveData<PostaMedica?>()
-    val postaSeleccionada: LiveData<PostaMedica?> = _postaSeleccionada
-
     private val _especialidadSeleccionada = MutableLiveData<Especialidad?>()
     val especialidadSeleccionada: LiveData<Especialidad?> = _especialidadSeleccionada
 
@@ -81,31 +76,7 @@ class PacienteViewModel : ViewModel() {
         )
     }
 
-    // ==================== FLUJO DE EXPLORACIÓN ====================
-
-    fun cargarPostas() {
-        _isLoading.value = true
-        repo.obtenerPostas(
-            onSuccess = { lista ->
-                _isLoading.value = false
-                _postas.value = lista
-            },
-            onFailure = { msg ->
-                _isLoading.value = false
-                _mensaje.value = msg
-            }
-        )
-    }
-
-    fun seleccionarPosta(posta: PostaMedica) {
-        _postaSeleccionada.value = posta
-        // Limpiar selecciones posteriores
-        _especialidadSeleccionada.value = null
-        _medicoSeleccionado.value = null
-        _horarioSeleccionado.value = null
-        // Cargar especialidades
-        cargarEspecialidades()
-    }
+    // ==================== FLUJO DE EXPLORACIÓN (sin postas) ====================
 
     fun cargarEspecialidades() {
         _isLoading.value = true
@@ -125,14 +96,13 @@ class PacienteViewModel : ViewModel() {
         _especialidadSeleccionada.value = especialidad
         _medicoSeleccionado.value = null
         _horarioSeleccionado.value = null
-        // Cargar médicos filtrados por posta + especialidad
-        val posta = _postaSeleccionada.value ?: return
-        cargarMedicos(posta.idPosta, especialidad.idEspecialidad)
+        // Cargar médicos filtrados solo por especialidad
+        cargarMedicos(especialidad.idEspecialidad)
     }
 
-    fun cargarMedicos(idPosta: String, idEspecialidad: String) {
+    fun cargarMedicos(idEspecialidad: String) {
         _isLoading.value = true
-        repo.obtenerMedicosFiltrados(idPosta, idEspecialidad,
+        repo.obtenerMedicosFiltrados(idEspecialidad,
             onSuccess = { lista ->
                 _isLoading.value = false
                 _medicos.value = lista
@@ -168,16 +138,16 @@ class PacienteViewModel : ViewModel() {
         _horarioSeleccionado.value = horario
     }
 
-    // ==================== RESERVA (RF04) ====================
+    // ==================== RESERVA CON PAGO (RF04) ====================
 
-    fun confirmarReserva(motivo: String, horaSeleccionada: String) {
+    fun confirmarReserva(motivo: String, horaSeleccionada: String,
+                         montoPago: Double, metodoPago: String, referenciaPago: String) {
         val paciente = _datosPaciente.value
         val medico = _medicoSeleccionado.value
-        val posta = _postaSeleccionada.value
         val especialidad = _especialidadSeleccionada.value
         val horario = _horarioSeleccionado.value
 
-        if (paciente == null || medico == null || posta == null ||
+        if (paciente == null || medico == null ||
             especialidad == null || horario == null) {
             _mensaje.value = "Error: faltan datos para completar la reserva"
             return
@@ -195,8 +165,10 @@ class PacienteViewModel : ViewModel() {
             motivo = motivo,
             paciente = paciente,
             medico = medico,
-            posta = posta,
             especialidad = especialidad,
+            montoPago = montoPago,
+            metodoPago = metodoPago,
+            referenciaPago = referenciaPago,
             onSuccess = { idCita ->
                 _isLoading.value = false
                 _mensaje.value = "¡Cita reservada exitosamente!"
@@ -243,7 +215,7 @@ class PacienteViewModel : ViewModel() {
         repo.cancelarCita(cita,
             onSuccess = {
                 _isLoading.value = false
-                _mensaje.value = "Cita cancelada exitosamente"
+                _mensaje.value = "Cita cancelada exitosamente. Pago reembolsado."
                 cargarMisCitas() // Recargar la lista
             },
             onFailure = { msg ->
@@ -256,7 +228,6 @@ class PacienteViewModel : ViewModel() {
     // ==================== UTILIDADES ====================
 
     fun limpiarSelecciones() {
-        _postaSeleccionada.value = null
         _especialidadSeleccionada.value = null
         _medicoSeleccionado.value = null
         _horarioSeleccionado.value = null
@@ -267,7 +238,6 @@ class PacienteViewModel : ViewModel() {
     fun reservaCompletada() { _reservaExitosa.value = null }
 
     fun cerrarSesion() { auth.signOut() }
-
     private fun compararFechas(fecha1: String, fecha2: String): Int {
         return try {
             val sdf = java.text.SimpleDateFormat(Constants.FORMATO_FECHA, java.util.Locale("es", "PE"))
@@ -290,8 +260,73 @@ class PacienteViewModel : ViewModel() {
         }
     }
 
+    // ==================== TRATAMIENTOS Y SESIONES ====================
+
+    private val _misTratamientos = MutableLiveData<List<PlanTratamiento>>()
+    val misTratamientos: LiveData<List<PlanTratamiento>> = _misTratamientos
+
+    private val _sesionesTratamiento = MutableLiveData<List<SesionTratamiento>>()
+    val sesionesTratamiento: LiveData<List<SesionTratamiento>> = _sesionesTratamiento
+
+    private val _sesionAgendada = MutableLiveData<Boolean>()
+    val sesionAgendada: LiveData<Boolean> = _sesionAgendada
+
+    fun cargarMisTratamientos() {
+        if (uidPaciente.isBlank()) return
+        _isLoading.value = true
+        repo.obtenerMisTratamientos(uidPaciente,
+            onSuccess = { lista ->
+                _isLoading.value = false
+                _misTratamientos.value = lista
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun cargarSesiones(idPlan: String) {
+        _isLoading.value = true
+        repo.obtenerSesionesDeTratamiento(idPlan,
+            onSuccess = { lista ->
+                _isLoading.value = false
+                _sesionesTratamiento.value = lista
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun agendarSesion(
+        sesion: SesionTratamiento,
+        horario: Horario,
+        horaSeleccionada: String,
+        montoPago: Double,
+        metodoPago: String,
+        referenciaPago: String
+    ) {
+        _isLoading.value = true
+        repo.agendarSesion(sesion, horario, horaSeleccionada, montoPago, metodoPago, referenciaPago,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "¡Sesión agendada y pagada exitosamente!"
+                _sesionAgendada.value = true
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun sesionAgendadaCompletada() { _sesionAgendada.value = false }
+
     override fun onCleared() {
         super.onCleared()
         listenerCitas?.remove()
     }
 }
+

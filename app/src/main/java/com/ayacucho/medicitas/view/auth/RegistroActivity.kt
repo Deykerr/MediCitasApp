@@ -14,6 +14,9 @@ import com.ayacucho.medicitas.R
 import com.ayacucho.medicitas.databinding.ActivityRegistroBinding
 import com.ayacucho.medicitas.utils.NetworkUtils
 import com.ayacucho.medicitas.viewmodel.AuthViewModel
+import com.ayacucho.medicitas.view.tutorial.TutorialManager
+import com.ayacucho.medicitas.view.tutorial.TutorialOverlayView
+import android.view.ViewGroup
 
 /**
  * Pantalla de Registro de Pacientes.
@@ -45,6 +48,70 @@ class RegistroActivity : AppCompatActivity() {
 
         configurarListeners()
         observarEstados()
+
+        if (TutorialManager.debeMostrarTutorialRegistro(this)) {
+            binding.root.post {
+                iniciarTutorial()
+            }
+        }
+    }
+
+    private var tutorialOverlay: TutorialOverlayView? = null
+    private var pasoActual = 0
+
+    private fun iniciarTutorial() {
+        val pasos = TutorialManager.getPasosRegistro(this)
+        if (pasos.isEmpty()) return
+
+        tutorialOverlay = TutorialOverlayView(this)
+        val decorView = window.decorView as ViewGroup
+        decorView.addView(tutorialOverlay, ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+
+        mostrarPasoTutorial(pasos)
+
+        tutorialOverlay?.onNext = {
+            if (pasoActual < pasos.size - 1) {
+                pasoActual++
+                mostrarPasoTutorial(pasos)
+            } else {
+                finalizarTutorial()
+            }
+        }
+
+        tutorialOverlay?.onSkip = {
+            finalizarTutorial()
+        }
+    }
+
+    private fun mostrarPasoTutorial(pasos: List<TutorialManager.TutorialStep>) {
+        val pasoInfo = pasos[pasoActual]
+        val targetView = findViewById<android.view.View>(pasoInfo.targetViewId)
+        
+        if (targetView != null) {
+            tutorialOverlay?.mostrarPaso(
+                targetView = targetView,
+                titulo = pasoInfo.titulo,
+                descripcion = pasoInfo.descripcion,
+                paso = pasoActual,
+                total = pasos.size,
+                iconRes = pasoInfo.iconRes,
+                esUltimo = pasoActual == pasos.size - 1
+            )
+        } else {
+            finalizarTutorial()
+        }
+    }
+
+    private fun finalizarTutorial() {
+        tutorialOverlay?.ocultarConAnimacion {
+            val decorView = window.decorView as ViewGroup
+            decorView.removeView(tutorialOverlay)
+            tutorialOverlay = null
+        }
+        TutorialManager.marcarTutorialRegistroMostrado(this)
     }
 
     private fun configurarListeners() {
