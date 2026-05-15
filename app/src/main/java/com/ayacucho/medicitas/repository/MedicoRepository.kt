@@ -113,8 +113,7 @@ class MedicoRepository {
     // ==================== GESTIÓN DE ESTADOS (RF05.3, RF08.1) ====================
 
     /**
-     * Actualiza el estado de una cita específica.
-     * Solo modifica el campo estadoCita sin tocar el resto del documento.
+     * Actualiza el estado de la cita (Ej: Atendida, No Asistió).
      */
     fun actualizarEstadoCita(
         idCita: String,
@@ -128,6 +127,49 @@ class MedicoRepository {
             .addOnFailureListener { e ->
                 onFailure(e.localizedMessage ?: "Error al actualizar estado de la cita")
             }
+    }
+
+    /**
+     * Actualiza el estado de asistencia de la cita (Ej: En Consulta, Finalizado).
+     */
+    fun actualizarEstadoAsistencia(
+        idCita: String,
+        nuevoEstado: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.collection(Constants.COLLECTION_CITAS).document(idCita)
+            .update("estadoAsistencia", nuevoEstado)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al actualizar asistencia de la cita")
+            }
+    }
+
+    /**
+     * Registra la atención médica y finaliza la consulta.
+     */
+    fun registrarAtencionMedica(
+        atencion: com.ayacucho.medicitas.model.AtencionMedica,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val batch = db.batch()
+
+        // 1. Guardar la atención en nueva colección
+        val atencionRef = db.collection("atenciones_medicas").document(atencion.idAtencion)
+        batch.set(atencionRef, atencion)
+
+        // 2. Actualizar cita
+        val citaRef = db.collection(Constants.COLLECTION_CITAS).document(atencion.idCita)
+        batch.update(citaRef, mapOf(
+            "estadoCita" to Constants.ESTADO_CITA_ATENDIDA,
+            "estadoAsistencia" to Constants.ESTADO_ASISTENCIA_FINALIZADO
+        ))
+
+        batch.commit()
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al guardar atención médica") }
     }
 
     // ==================== HORARIOS DEL MÉDICO (RF05.4) ====================

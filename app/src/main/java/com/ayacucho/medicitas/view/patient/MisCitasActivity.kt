@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ayacucho.medicitas.R
 import com.ayacucho.medicitas.model.CitaMedica
+import com.ayacucho.medicitas.model.SlotHorario
 import com.ayacucho.medicitas.utils.Constants
 import com.ayacucho.medicitas.viewmodel.PacienteViewModel
 import com.google.android.material.appbar.MaterialToolbar
@@ -25,8 +26,7 @@ import com.google.android.material.tabs.TabLayout
 /**
  * Historial de Citas del Paciente (RF04.5).
  * Tabs: "Próximas" y "Pasadas".
- * Permite cancelar citas próximas con reembolso (RF04.6).
- * Muestra monto y estado de pago en cada cita.
+ * Permite cancelar (RF04.6) y reprogramar (RF04.7) citas próximas.
  */
 class MisCitasActivity : AppCompatActivity() {
 
@@ -37,7 +37,7 @@ class MisCitasActivity : AppCompatActivity() {
     private lateinit var tabLayout: TabLayout
 
     private val listaActual = mutableListOf<CitaMedica>()
-    private var mostraPendientes = true // Tab activo
+    private var mostraPendientes = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,15 +54,8 @@ class MisCitasActivity : AppCompatActivity() {
         tabLayout = findViewById(R.id.tabLayout)
 
         rvCitas.layoutManager = LinearLayoutManager(this)
-        rvCitas.adapter = CitasPacienteAdapter(listaActual, mostraPendientes) { cita ->
-            AlertDialog.Builder(this)
-                .setTitle("Cancelar Cita")
-                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?\n\nSe realizará el reembolso de S/. ${"%.2f".format(cita.montoPago)}")
-                .setPositiveButton("Sí, cancelar") { _, _ -> viewModel.cancelarCita(cita) }
-                .setNegativeButton("No", null).show()
-        }
+        actualizarAdapter()
 
-        // Tabs
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 mostraPendientes = tab?.position == 0
@@ -74,6 +67,16 @@ class MisCitasActivity : AppCompatActivity() {
 
         observarEstados()
         viewModel.cargarMisCitas()
+        viewModel.cargarDatosPaciente()
+    }
+
+    private fun actualizarAdapter() {
+        rvCitas.adapter = CitasPacienteAdapter(
+            citas = listaActual,
+            mostrarAcciones = mostraPendientes,
+            onCancelar = { cita -> mostrarDialogoCancelacion(cita) },
+            onReprogramar = { cita -> mostrarDialogoReprogramacion(cita) }
+        )
     }
 
     private fun actualizarLista() {
@@ -84,19 +87,64 @@ class MisCitasActivity : AppCompatActivity() {
             viewModel.citasPasadas.value ?: emptyList()
         }
         listaActual.addAll(nuevaLista)
-
-        // Necesitamos re-crear el adapter para cambiar el flag mostraPendientes
-        rvCitas.adapter = CitasPacienteAdapter(listaActual, mostraPendientes) { cita ->
-            AlertDialog.Builder(this)
-                .setTitle("Cancelar Cita")
-                .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?\n\nSe realizará el reembolso de S/. ${"%.2f".format(cita.montoPago)}")
-                .setPositiveButton("Sí, cancelar") { _, _ -> viewModel.cancelarCita(cita) }
-                .setNegativeButton("No", null).show()
-        }
+        actualizarAdapter()
 
         tvVacio.visibility = if (listaActual.isEmpty()) View.VISIBLE else View.GONE
         rvCitas.visibility = if (listaActual.isEmpty()) View.GONE else View.VISIBLE
         tvVacio.text = if (mostraPendientes) "No tienes citas próximas" else "No tienes citas pasadas"
+    }
+
+    private fun mostrarDialogoCancelacion(cita: CitaMedica) {
+        val input = com.google.android.material.textfield.TextInputEditText(this)
+        input.hint = "Motivo de cancelación (opcional)"
+
+        val container = android.widget.FrameLayout(this)
+        val params = android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        params.setMargins(48, 24, 48, 24)
+        input.layoutParams = params
+        container.addView(input)
+
+        AlertDialog.Builder(this)
+            .setTitle("Cancelar Cita")
+            .setMessage("¿Estás seguro de cancelar tu cita del ${cita.fecha} a las ${cita.hora}?\n\nSe realizará el reembolso de S/. ${"%.2f".format(cita.montoPago)}")
+            .setView(container)
+            .setPositiveButton("Sí, cancelar") { _, _ ->
+                val motivo = input.text.toString()
+                viewModel.cancelarCita(cita, motivo)
+            }
+            .setNegativeButton("No", null)
+            .show()
+    }
+
+    private fun mostrarDialogoReprogramacion(cita: CitaMedica) {
+        // Usamos callback directo en lugar de LiveData observe() para evitar
+        // que LiveData emita el último valor cacheado antes de que lleguen los nuevos slots
+        viewModel.cargarSlotsParaReprogramar(cita.idPersonal) { slots ->
+            if (slots.isEmpty()) {
+                Toast.makeText(
+                    this,
+                    "No hay slots disponibles para reprogramar con este médico",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@cargarSlotsParaReprogramar
+            }
+
+            val items = slots.map { "📅 ${it.fecha}  🕐 ${it.horaInicio}" }.toTypedArray()
+            var selectedIndex = 0
+
+            AlertDialog.Builder(this)
+                .setTitle("Reprogramar\nActual: ${cita.fecha} — ${cita.hora}")
+                .setSingleChoiceItems(items, 0) { _, which -> selectedIndex = which }
+                .setPositiveButton("Confirmar") { _, _ ->
+                    val nuevoSlot = slots[selectedIndex]
+                    viewModel.reprogramarCita(cita, nuevoSlot)
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
     }
 
     private fun observarEstados() {
@@ -111,6 +159,12 @@ class MisCitasActivity : AppCompatActivity() {
         }
         viewModel.citasProximas.observe(this) { if (mostraPendientes) actualizarLista() }
         viewModel.citasPasadas.observe(this) { if (!mostraPendientes) actualizarLista() }
+        viewModel.reprogramacionExitosa.observe(this) { exitosa ->
+            if (exitosa == true) {
+                viewModel.reprogramacionCompletada()
+                viewModel.cargarMisCitas() // Recargar lista tras reprogramar
+            }
+        }
     }
 }
 
@@ -118,8 +172,9 @@ class MisCitasActivity : AppCompatActivity() {
 
 class CitasPacienteAdapter(
     private val citas: List<CitaMedica>,
-    private val mostrarCancelar: Boolean,
-    private val onCancelar: (CitaMedica) -> Unit
+    private val mostrarAcciones: Boolean,
+    private val onCancelar: (CitaMedica) -> Unit,
+    private val onReprogramar: (CitaMedica) -> Unit
 ) : RecyclerView.Adapter<CitasPacienteAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -132,6 +187,7 @@ class CitasPacienteAdapter(
         val tvEstadoPago: TextView = view.findViewById(R.id.tvEstadoPago)
         val tvMotivo: TextView = view.findViewById(R.id.tvMotivoCita)
         val btnCancelar: MaterialButton = view.findViewById(R.id.btnCancelar)
+        val btnReprogramar: MaterialButton = view.findViewById(R.id.btnReprogramar)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -149,53 +205,51 @@ class CitasPacienteAdapter(
         holder.tvMedico.text = "Dr. ${cita.nombreMedico}"
         holder.tvMotivo.text = if (cita.motivoConsulta.isBlank()) "" else "Motivo: ${cita.motivoConsulta}"
 
-        // Pago
         holder.tvMontoPago.text = if (cita.montoPago > 0) {
             "S/. ${"%.2f".format(cita.montoPago)} (${cita.metodoPago})"
-        } else {
-            ""
-        }
+        } else { "" }
 
-        // Badge de estado de cita
         configurarEstado(holder.tvEstado, cita.estadoCita)
-
-        // Badge de estado de pago
         configurarEstadoPago(holder.tvEstadoPago, cita.estadoPago)
 
-        // Solo mostrar cancelar en citas próximas con estado Reservada
-        holder.btnCancelar.visibility = if (mostrarCancelar &&
-            cita.estadoCita == Constants.ESTADO_CITA_RESERVADA) View.VISIBLE else View.GONE
+        // Mostrar botones solo en citas próximas con estado activo
+        val esActiva = cita.estadoCita == Constants.ESTADO_CITA_PENDIENTE ||
+                       cita.estadoCita == Constants.ESTADO_CITA_CONFIRMADA
+
+        holder.btnReprogramar.visibility =
+            if (mostrarAcciones && esActiva) View.VISIBLE else View.GONE
+        holder.btnCancelar.visibility =
+            if (mostrarAcciones && esActiva) View.VISIBLE else View.GONE
+
+        holder.btnReprogramar.setOnClickListener { onReprogramar(cita) }
         holder.btnCancelar.setOnClickListener { onCancelar(cita) }
     }
 
     private fun configurarEstado(tvEstado: TextView, estado: String) {
         tvEstado.text = estado
         val (textColor, bgColor) = when (estado) {
-            Constants.ESTADO_CITA_RESERVADA -> Pair("#1565C0", "#E3F2FD")
-            Constants.ESTADO_CITA_ATENDIDA -> Pair("#2E7D32", "#E8F5E9")
-            Constants.ESTADO_CITA_NO_ASISTIO -> Pair("#E65100", "#FFF3E0")
-            Constants.ESTADO_CITA_CANCELADA -> Pair("#C62828", "#FFEBEE")
+            Constants.ESTADO_CITA_CONFIRMADA  -> Pair("#1565C0", "#E3F2FD")
+            Constants.ESTADO_CITA_REPROGRAMADA -> Pair("#6A1B9A", "#F3E5F5")
+            Constants.ESTADO_CITA_ATENDIDA    -> Pair("#2E7D32", "#E8F5E9")
+            Constants.ESTADO_CITA_NO_ASISTIO  -> Pair("#E65100", "#FFF3E0")
+            Constants.ESTADO_CITA_CANCELADA   -> Pair("#C62828", "#FFEBEE")
             else -> Pair("#757575", "#F5F5F5")
         }
         tvEstado.setTextColor(Color.parseColor(textColor))
-        val bg = GradientDrawable()
-        bg.setColor(Color.parseColor(bgColor))
-        bg.cornerRadius = 16f
+        val bg = GradientDrawable(); bg.setColor(Color.parseColor(bgColor)); bg.cornerRadius = 16f
         tvEstado.background = bg
     }
 
     private fun configurarEstadoPago(tvEstado: TextView, estado: String) {
         tvEstado.text = estado
         val (textColor, bgColor) = when (estado) {
-            Constants.ESTADO_PAGO_PAGADO -> Pair("#2E7D32", "#E8F5E9")
-            Constants.ESTADO_PAGO_PENDIENTE -> Pair("#E65100", "#FFF3E0")
+            Constants.ESTADO_PAGO_PAGADO      -> Pair("#2E7D32", "#E8F5E9")
+            Constants.ESTADO_PAGO_PENDIENTE   -> Pair("#E65100", "#FFF3E0")
             Constants.ESTADO_PAGO_REEMBOLSADO -> Pair("#6A1B9A", "#F3E5F5")
             else -> Pair("#757575", "#F5F5F5")
         }
         tvEstado.setTextColor(Color.parseColor(textColor))
-        val bg = GradientDrawable()
-        bg.setColor(Color.parseColor(bgColor))
-        bg.cornerRadius = 16f
+        val bg = GradientDrawable(); bg.setColor(Color.parseColor(bgColor)); bg.cornerRadius = 16f
         tvEstado.background = bg
     }
 

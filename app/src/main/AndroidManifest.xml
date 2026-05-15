@@ -45,11 +45,18 @@
             android:name=".view.auth.RecuperarContrasenaActivity"
             android:exported="false" />
 
-        <!-- Pantallas del Administrador (RF06) -->
+        <!-- Recepcionista -->
+        <activity
+            android:name=".view.recepcionista.RecepcionistaHomeActivity"
+            android:exported="false" />
+
+        <!-- Administrador -->
         <activity
             android:name=".view.admin.AdminHomeActivity"
             android:exported="false" />
-
+        <activity
+            android:name=".view.admin.AdminReportesActivity"
+            android:exported="false" />
         <activity
             android:name=".view.admin.GestionEspecialidadesActivity"
             android:exported="false" />
@@ -67,6 +74,9 @@
             android:name=".view.doctor.MedicoHomeActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".view.doctor.RecepcionistaHomeActivity"
+            android:exported="false" />
         <activity
             android:name=".view.doctor.MisHorariosActivity"
             android:exported="false" />

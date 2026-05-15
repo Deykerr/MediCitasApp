@@ -128,51 +128,19 @@ class DetalleTratamientoActivity : AppCompatActivity() {
      * Inicia el flujo de agendar sesión: seleccionar horario del médico y pagar.
      */
     private fun iniciarFlujoAgendarSesion() {
-        viewModel.cargarHorarios(idMedico)
+        viewModel.cargarSlots(idMedico)
 
-        viewModel.horarios.observe(this) { horarios ->
-            if (horarios.isEmpty()) {
-                Toast.makeText(this, "No hay horarios disponibles para este médico", Toast.LENGTH_SHORT).show()
+        viewModel.slotsHorario.observe(this) { slots ->
+            if (slots.isEmpty()) {
+                Toast.makeText(this, "No hay slots disponibles para este médico", Toast.LENGTH_SHORT).show()
                 return@observe
             }
-            mostrarDialogSeleccionHorario(horarios)
+            mostrarDialogSeleccionHorario(slots)
         }
     }
 
-    private fun mostrarDialogSeleccionHorario(horarios: List<Horario>) {
-        // Generar slots de todos los horarios
-        val slots = mutableListOf<Triple<Horario, String, String>>() // horario, horaSlot, display
-        for (horario in horarios) {
-            try {
-                val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                val inicio = sdf.parse(horario.horaInicio) ?: continue
-                val fin = sdf.parse(horario.horaFin) ?: continue
-                val duracion = if (horario.duracionCitaMinutos > 0) horario.duracionCitaMinutos else 30
-                val cuposUsados = horario.cuposTotales - horario.cuposDisponibles
-                val cal = java.util.Calendar.getInstance()
-                cal.time = inicio
-                cal.add(java.util.Calendar.MINUTE, cuposUsados * duracion)
-
-                val calFin = java.util.Calendar.getInstance()
-                calFin.time = fin
-
-                var slotsGen = 0
-                while (cal.before(calFin) && slotsGen < horario.cuposDisponibles) {
-                    val horaSlot = sdf.format(cal.time)
-                    val display = "${horario.dia} ${horario.fecha} — $horaSlot"
-                    slots.add(Triple(horario, horaSlot, display))
-                    cal.add(java.util.Calendar.MINUTE, duracion)
-                    slotsGen++
-                }
-            } catch (e: Exception) { /* skip */ }
-        }
-
-        if (slots.isEmpty()) {
-            Toast.makeText(this, "No hay slots disponibles", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val items = slots.map { it.third }.toTypedArray()
+    private fun mostrarDialogSeleccionHorario(slots: List<com.ayacucho.medicitas.model.SlotHorario>) {
+        val items = slots.map { "${it.fecha} — ${it.horaInicio}" }.toTypedArray()
         var selectedIndex = 0
 
         AlertDialog.Builder(this)
@@ -180,20 +148,20 @@ class DetalleTratamientoActivity : AppCompatActivity() {
             .setSingleChoiceItems(items, 0) { _, which -> selectedIndex = which }
             .setPositiveButton("Pagar S/. ${"%.2f".format(precioPorSesion)}") { _, _ ->
                 val selected = slots[selectedIndex]
-                mostrarDialogPagoSesion(selected.first, selected.second)
+                mostrarDialogPagoSesion(selected)
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
-    private fun mostrarDialogPagoSesion(horario: Horario, horaSeleccionada: String) {
+    private fun mostrarDialogPagoSesion(slot: com.ayacucho.medicitas.model.SlotHorario) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_simulacion_pago, null)
-        val etNumero = dialogView.findViewById<TextInputEditText>(R.id.etNumeroTarjeta)
-        val etExpiracion = dialogView.findViewById<TextInputEditText>(R.id.etExpiracion)
-        val etCvv = dialogView.findViewById<TextInputEditText>(R.id.etCvv)
-        val etTitular = dialogView.findViewById<TextInputEditText>(R.id.etTitular)
-        val tvTipoTarjeta = dialogView.findViewById<TextView>(R.id.tvTipoTarjeta)
         val tvMontoPagar = dialogView.findViewById<TextView>(R.id.tvMontoPagar)
+        val toggleMetodo = dialogView.findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.toggleMetodoPago)
+        val layoutTarjeta = dialogView.findViewById<View>(R.id.layoutTarjeta)
+        val layoutQR = dialogView.findViewById<View>(R.id.layoutQR)
+        val ivQR = dialogView.findViewById<android.widget.ImageView>(R.id.ivQR)
+        val tvInstruccionQR = dialogView.findViewById<TextView>(R.id.tvInstruccionQR)
         val btnPagar = dialogView.findViewById<MaterialButton>(R.id.btnPagar)
         val progressPago = dialogView.findViewById<ProgressBar>(R.id.progressPago)
         val tvEstadoProceso = dialogView.findViewById<TextView>(R.id.tvEstadoProceso)
@@ -201,25 +169,32 @@ class DetalleTratamientoActivity : AppCompatActivity() {
         tvMontoPagar.text = "S/. ${"%.2f".format(precioPorSesion)}"
         btnPagar.text = "Pagar S/. ${"%.2f".format(precioPorSesion)}"
 
-        // Pre-llenar datos para facilitar pruebas
-        etNumero.setText("4555123456789012")
-        etExpiracion.setText("12/28")
-        etCvv.setText("123")
-
-        etNumero.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val numero = s.toString()
-                tvTipoTarjeta.text = when {
-                    numero.startsWith("4") -> "💳 Visa"
-                    numero.startsWith("5") -> "💳 Mastercard"
-                    numero.startsWith("3") -> "💳 American Express"
-                    numero.isNotEmpty() -> "💳 Tarjeta de crédito/débito"
-                    else -> "Ingrese número de tarjeta"
+        // Selección de método
+        toggleMetodo.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.btnMetodoTarjeta -> {
+                        layoutTarjeta.visibility = View.VISIBLE
+                        layoutQR.visibility = View.GONE
+                    }
+                    R.id.btnMetodoYape -> {
+                        layoutTarjeta.visibility = View.GONE
+                        layoutQR.visibility = View.VISIBLE
+                        tvInstruccionQR.text = "Escanea este QR con tu app Yape"
+                        // Simular QR de Yape (usando un icono del sistema como placeholder)
+                        ivQR.setImageResource(android.R.drawable.ic_menu_view)
+                        ivQR.setColorFilter(ContextCompat.getColor(this, android.R.color.holo_purple))
+                    }
+                    R.id.btnMetodoPlin -> {
+                        layoutTarjeta.visibility = View.GONE
+                        layoutQR.visibility = View.VISIBLE
+                        tvInstruccionQR.text = "Escanea este QR con tu app Plin"
+                        ivQR.setImageResource(android.R.drawable.ic_menu_view)
+                        ivQR.setColorFilter(ContextCompat.getColor(this, android.R.color.holo_blue_dark))
+                    }
                 }
             }
-        })
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
@@ -227,38 +202,34 @@ class DetalleTratamientoActivity : AppCompatActivity() {
             .create()
 
         btnPagar.setOnClickListener {
-            val numero = etNumero.text.toString().trim()
-            val cvv = etCvv.text.toString().trim()
-            val titular = etTitular.text.toString().trim()
+            val metodoSeleccionado = when (toggleMetodo.checkedButtonId) {
+                R.id.btnMetodoYape -> com.ayacucho.medicitas.utils.Constants.METODO_PAGO_YAPE
+                R.id.btnMetodoPlin -> com.ayacucho.medicitas.utils.Constants.METODO_PAGO_PLIN
+                else -> com.ayacucho.medicitas.utils.Constants.METODO_PAGO_TARJETA
+            }
 
-            if (numero.length < 16 || cvv.length < 3 || titular.isBlank()) {
-                Toast.makeText(this, "Complete todos los campos correctamente", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            if (metodoSeleccionado == com.ayacucho.medicitas.utils.Constants.METODO_PAGO_TARJETA) {
+                val etNumero = dialogView.findViewById<TextInputEditText>(R.id.etNumeroTarjeta)
+                if (etNumero.text.toString().length < 16) {
+                    etNumero.error = "Número de tarjeta inválido"
+                    return@setOnClickListener
+                }
             }
 
             btnPagar.isEnabled = false
             progressPago.visibility = View.VISIBLE
             tvEstadoProceso.visibility = View.VISIBLE
-            tvEstadoProceso.text = "Procesando pago de sesión..."
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                tvEstadoProceso.text = "Autorizando transacción..."
-            }, 800)
+            tvEstadoProceso.text = "Procesando $metodoSeleccionado..."
 
             Handler(Looper.getMainLooper()).postDelayed({
                 progressPago.visibility = View.GONE
                 tvEstadoProceso.text = "✅ ¡Pago aprobado!"
                 tvEstadoProceso.setTextColor(ContextCompat.getColor(this, R.color.primary))
 
-                val tipoTarjeta = when {
-                    numero.startsWith("4") -> "Visa"
-                    numero.startsWith("5") -> "Mastercard"
-                    else -> "Tarjeta"
-                }
                 val referencia = "SES-${UUID.randomUUID().toString().take(8).uppercase()}"
 
                 val sesion = proximaSesionPendiente!!
-                viewModel.agendarSesion(sesion, horario, horaSeleccionada, precioPorSesion, tipoTarjeta, referencia)
+                viewModel.agendarSesion(sesion, slot, precioPorSesion, metodoSeleccionado, referencia)
 
                 Handler(Looper.getMainLooper()).postDelayed({
                     dialog.dismiss()

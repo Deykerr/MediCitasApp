@@ -62,6 +62,9 @@ class PacienteViewModel : ViewModel() {
     private val _citasPasadas = MutableLiveData<List<CitaMedica>>()
     val citasPasadas: LiveData<List<CitaMedica>> = _citasPasadas
 
+    private val _citaHoy = MutableLiveData<CitaMedica?>()
+    val citaHoy: LiveData<CitaMedica?> = _citaHoy
+
     // Reserva exitosa
     private val _reservaExitosa = MutableLiveData<String?>()
     val reservaExitosa: LiveData<String?> = _reservaExitosa
@@ -73,6 +76,52 @@ class PacienteViewModel : ViewModel() {
         repo.obtenerDatosPaciente(uidPaciente,
             onSuccess = { _datosPaciente.value = it },
             onFailure = { _mensaje.value = it }
+        )
+    }
+
+    fun actualizarPerfil(datos: Map<String, Any>) {
+        if (uidPaciente.isBlank()) return
+        _isLoading.value = true
+        repo.actualizarPerfilPaciente(uidPaciente, datos,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Perfil actualizado exitosamente"
+                cargarDatosPaciente() // Recargar datos actualizados
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    // ==================== DEPENDIENTES ====================
+
+    private val _dependientes = MutableLiveData<List<Dependiente>>()
+    val dependientes: LiveData<List<Dependiente>> = _dependientes
+
+    fun cargarDependientes() {
+        if (uidPaciente.isBlank()) return
+        repo.obtenerDependientes(uidPaciente,
+            onSuccess = { _dependientes.value = it },
+            onFailure = { _mensaje.value = it }
+        )
+    }
+
+    fun agregarDependiente(dependiente: Dependiente) {
+        if (uidPaciente.isBlank()) return
+        _isLoading.value = true
+        val dependienteFinal = dependiente.copy(idTitular = uidPaciente)
+        repo.agregarDependiente(dependienteFinal,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Familiar agregado exitosamente"
+                cargarDependientes()
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
         )
     }
 
@@ -114,18 +163,27 @@ class PacienteViewModel : ViewModel() {
         )
     }
 
+    private val _slotsHorario = MutableLiveData<List<SlotHorario>>()
+    val slotsHorario: LiveData<List<SlotHorario>> = _slotsHorario
+
+    private val _slotSeleccionado = MutableLiveData<SlotHorario?>()
+    val slotSeleccionado: LiveData<SlotHorario?> = _slotSeleccionado
+
+    // ...
+
     fun seleccionarMedico(medico: PersonalSalud) {
         _medicoSeleccionado.value = medico
         _horarioSeleccionado.value = null
-        cargarHorarios(medico.idPersonal)
+        _slotSeleccionado.value = null
+        cargarSlots(medico.idPersonal)
     }
 
-    fun cargarHorarios(idMedico: String) {
+    fun cargarSlots(idMedico: String) {
         _isLoading.value = true
-        repo.obtenerHorariosDisponibles(idMedico,
+        repo.obtenerSlotsDisponibles(idMedico,
             onSuccess = { lista ->
                 _isLoading.value = false
-                _horarios.value = lista
+                _slotsHorario.value = lista
             },
             onFailure = { msg ->
                 _isLoading.value = false
@@ -134,34 +192,48 @@ class PacienteViewModel : ViewModel() {
         )
     }
 
-    fun seleccionarHorario(horario: Horario) {
-        _horarioSeleccionado.value = horario
+    /**
+     * Versión con callback directo para reprogramación.
+     * Evita el problema de LiveData que emite el último valor cacheado
+     * al agregar un nuevo observador (stale data issue).
+     */
+    fun cargarSlotsParaReprogramar(idMedico: String, onResult: (List<SlotHorario>) -> Unit) {
+        _isLoading.value = true
+        repo.obtenerSlotsDisponibles(idMedico,
+            onSuccess = { lista ->
+                _isLoading.value = false
+                onResult(lista)
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+                onResult(emptyList())
+            }
+        )
+    }
+
+    fun seleccionarSlot(slot: SlotHorario) {
+        _slotSeleccionado.value = slot
     }
 
     // ==================== RESERVA CON PAGO (RF04) ====================
 
-    fun confirmarReserva(motivo: String, horaSeleccionada: String,
-                         montoPago: Double, metodoPago: String, referenciaPago: String) {
+    fun confirmarReserva(motivo: String, montoPago: Double, metodoPago: String, referenciaPago: String,
+                         pacienteRealNombre: String? = null, pacienteRealDni: String? = null) {
         val paciente = _datosPaciente.value
         val medico = _medicoSeleccionado.value
         val especialidad = _especialidadSeleccionada.value
-        val horario = _horarioSeleccionado.value
+        val slot = _slotSeleccionado.value
 
         if (paciente == null || medico == null ||
-            especialidad == null || horario == null) {
+            especialidad == null || slot == null) {
             _mensaje.value = "Error: faltan datos para completar la reserva"
             return
         }
 
-        if (horaSeleccionada.isBlank()) {
-            _mensaje.value = "Selecciona una hora para tu cita"
-            return
-        }
-
         _isLoading.value = true
-        repo.confirmarReserva(
-            horarioSeleccionado = horario,
-            horaSeleccionada = horaSeleccionada,
+        repo.confirmarReservaSlot(
+            slotSeleccionado = slot,
             motivo = motivo,
             paciente = paciente,
             medico = medico,
@@ -169,6 +241,8 @@ class PacienteViewModel : ViewModel() {
             montoPago = montoPago,
             metodoPago = metodoPago,
             referenciaPago = referenciaPago,
+            pacienteRealNombre = pacienteRealNombre ?: "${paciente.nombres} ${paciente.apellidos}",
+            pacienteRealDni = pacienteRealDni ?: paciente.dni,
             onSuccess = { idCita ->
                 _isLoading.value = false
                 _mensaje.value = "¡Cita reservada exitosamente!"
@@ -190,14 +264,22 @@ class PacienteViewModel : ViewModel() {
             onSuccess = { todasLasCitas ->
                 _isLoading.value = false
                 val fechaHoy = DateUtils.fechaActual()
+                
+                // Buscar cita de hoy (solo Reservada o Atendida)
+                val hoy = todasLasCitas.find { 
+                    it.fecha == fechaHoy && 
+                    (it.estadoCita == Constants.ESTADO_CITA_CONFIRMADA || it.estadoCita == Constants.ESTADO_CITA_ATENDIDA)
+                }
+                _citaHoy.value = hoy
+
                 // Separar en próximas (Reservada con fecha >= hoy) y pasadas
                 _citasProximas.value = todasLasCitas.filter {
-                    it.estadoCita == Constants.ESTADO_CITA_RESERVADA &&
+                    it.estadoCita == Constants.ESTADO_CITA_CONFIRMADA &&
                     compararFechas(it.fecha, fechaHoy) >= 0
                 }.sortedBy { it.fecha + it.hora }
 
                 _citasPasadas.value = todasLasCitas.filter {
-                    it.estadoCita != Constants.ESTADO_CITA_RESERVADA ||
+                    it.estadoCita != Constants.ESTADO_CITA_CONFIRMADA ||
                     compararFechas(it.fecha, fechaHoy) < 0
                 }.sortedByDescending { it.fecha + it.hora }
             },
@@ -210,9 +292,9 @@ class PacienteViewModel : ViewModel() {
 
     // ==================== CANCELACIÓN (RF04.6) ====================
 
-    fun cancelarCita(cita: CitaMedica) {
+    fun cancelarCita(cita: CitaMedica, motivo: String = "") {
         _isLoading.value = true
-        repo.cancelarCita(cita,
+        repo.cancelarCita(cita, motivo,
             onSuccess = {
                 _isLoading.value = false
                 _mensaje.value = "Cita cancelada exitosamente. Pago reembolsado."
@@ -302,14 +384,13 @@ class PacienteViewModel : ViewModel() {
 
     fun agendarSesion(
         sesion: SesionTratamiento,
-        horario: Horario,
-        horaSeleccionada: String,
+        slot: SlotHorario,
         montoPago: Double,
         metodoPago: String,
         referenciaPago: String
     ) {
         _isLoading.value = true
-        repo.agendarSesion(sesion, horario, horaSeleccionada, montoPago, metodoPago, referenciaPago,
+        repo.agendarSesion(sesion, slot, montoPago, metodoPago, referenciaPago,
             onSuccess = {
                 _isLoading.value = false
                 _mensaje.value = "¡Sesión agendada y pagada exitosamente!"
@@ -323,6 +404,29 @@ class PacienteViewModel : ViewModel() {
     }
 
     fun sesionAgendadaCompletada() { _sesionAgendada.value = false }
+
+
+    // ==================== REPROGRAMACION DE CITAS ====================
+
+    private val _reprogramacionExitosa = MutableLiveData<Boolean>()
+    val reprogramacionExitosa: LiveData<Boolean> = _reprogramacionExitosa
+
+    fun reprogramarCita(cita: CitaMedica, nuevoSlot: SlotHorario) {
+        _isLoading.value = true
+        repo.reprogramarCita(cita, nuevoSlot,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Cita reprogramada al ${nuevoSlot.fecha} a las ${nuevoSlot.horaInicio}"
+                _reprogramacionExitosa.value = true
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun reprogramacionCompletada() { _reprogramacionExitosa.value = false }
 
     override fun onCleared() {
         super.onCleared()

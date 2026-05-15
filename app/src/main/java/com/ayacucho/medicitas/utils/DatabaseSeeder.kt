@@ -67,7 +67,10 @@ object DatabaseSeeder {
             PersonalSalud("MED10", "Rosa Elena",   "Huayta Condori",    "44123785", "rehuayta@clinica.pe",    "ESP05", "Dermatología",      "Activo"),
             // Traumatología
             PersonalSalud("MED11", "Jorge Luis",   "Ramos Chipana",     "47654321", "jlramos@clinica.pe",     "ESP06", "Traumatología",     "Activo"),
-            PersonalSalud("MED12", "Carlos Iván",  "Saravia Gutierrez", "40112233", "cisaravia@clinica.pe",   "ESP06", "Traumatología",     "Activo")
+            PersonalSalud("MED12", "Carlos Iván",  "Saravia Gutierrez", "40112233", "cisaravia@clinica.pe",   "ESP06", "Traumatología",     "Activo"),
+            // Recepcionistas
+            PersonalSalud("REC01", "Ana",          "García López",      "11223344", "recepcion1@clinica.pe",  "",      "Recepción",         "Activo", "Recepcionista"),
+            PersonalSalud("REC02", "Mario",        "Torres Silva",      "55667788", "recepcion2@clinica.pe",  "",      "Recepción",         "Activo", "Recepcionista")
         )
 
         val idMap = mutableMapOf<String, String>()
@@ -126,7 +129,7 @@ object DatabaseSeeder {
             batch.commit()
                 .addOnSuccessListener {
                     onResult(
-                        "✅ ¡Éxito! 12 médicos sembrados.\n" +
+                        "✅ ¡Éxito! 12 médicos y 2 recepcionistas sembrados.\n" +
                         "📋 Cobertura: 6 especialidades con precios\n" +
                         "📅 12 horarios creados (turnos mañana y tarde)\n" +
                         "🔑 Contraseña de todos: medico123456"

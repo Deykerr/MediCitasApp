@@ -42,6 +42,9 @@ class AuthViewModel : ViewModel() {
     private val _navegarAdmin = MutableLiveData(false)
     val navegarAdmin: LiveData<Boolean> = _navegarAdmin
 
+    private val _navegarRecepcionista = MutableLiveData(false)
+    val navegarRecepcionista: LiveData<Boolean> = _navegarRecepcionista
+
     // ==================== REGISTRO ====================
 
     /**
@@ -147,6 +150,10 @@ class AuthViewModel : ViewModel() {
                 _isLoading.value = false
                 _navegarAdmin.value = true
             },
+            onRouteRecepcionista = {
+                _isLoading.value = false
+                _navegarRecepcionista.value = true
+            },
             onFailure = { mensaje ->
                 _isLoading.value = false
                 _errorMessage.value = mensaje
@@ -207,6 +214,10 @@ class AuthViewModel : ViewModel() {
                     _isLoading.value = false
                     _navegarAdmin.value = true
                 },
+                onRouteRecepcionista = {
+                    _isLoading.value = false
+                    _navegarRecepcionista.value = true
+                },
                 onFailure = {
                     _isLoading.value = false
                     // Sesión inválida, el usuario verá el login
@@ -227,6 +238,7 @@ class AuthViewModel : ViewModel() {
     fun navegacionPacienteCompletada() { _navegarPaciente.value = false }
     fun navegacionMedicoCompletada() { _navegarMedico.value = false }
     fun navegacionAdminCompletada() { _navegarAdmin.value = false }
+    fun navegacionRecepcionistaCompletada() { _navegarRecepcionista.value = false }
     fun registroCompletado() { _registroExitoso.value = false }
     fun recuperacionCompletada() { _recuperacionExitosa.value = false }
     fun limpiarError() { _errorMessage.value = null }

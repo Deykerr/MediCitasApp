@@ -15,6 +15,7 @@ import com.ayacucho.medicitas.databinding.ActivityLoginBinding
 import com.ayacucho.medicitas.utils.NetworkUtils
 import com.ayacucho.medicitas.view.admin.AdminHomeActivity
 import com.ayacucho.medicitas.view.doctor.MedicoHomeActivity
+import com.ayacucho.medicitas.view.doctor.RecepcionistaHomeActivity
 import com.ayacucho.medicitas.view.patient.PacienteHomeActivity
 import com.ayacucho.medicitas.viewmodel.AuthViewModel
 import com.ayacucho.medicitas.view.auth.BienvenidaActivity
@@ -51,6 +52,7 @@ class LoginActivity : AppCompatActivity() {
         val subtituloRes = when (rol) {
             BienvenidaActivity.ROL_MEDICO  -> "Ingresa con tu cuenta médica"
             BienvenidaActivity.ROL_ADMIN   -> "Acceso para administradores"
+            BienvenidaActivity.ROL_RECEPCIONISTA -> "Acceso para recepción"
             else                           -> getString(R.string.login_subtitulo)
         }
         // Buscamos el TextView del subtítulo en la jerarquía de vistas
@@ -222,6 +224,15 @@ class LoginActivity : AppCompatActivity() {
                 authViewModel.navegacionAdminCompletada()
                 Toast.makeText(this, "Bienvenido, Administrador", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this, AdminHomeActivity::class.java))
+                finish()
+            }
+        }
+
+        authViewModel.navegarRecepcionista.observe(this) { navegar ->
+            if (navegar) {
+                authViewModel.navegacionRecepcionistaCompletada()
+                Toast.makeText(this, "Bienvenido, Recepcionista", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, RecepcionistaHomeActivity::class.java))
                 finish()
             }
         }

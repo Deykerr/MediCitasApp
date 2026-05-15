@@ -105,19 +105,44 @@
             android:textSize="12sp"
             android:textStyle="italic" />
 
-        <!-- Botón cancelar (solo visible en citas próximas) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancelar"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginTop="8dp"
-            android:text="Cancelar cita"
-            android:textAllCaps="false"
-            android:textSize="12sp"
-            android:textColor="@color/error"
-            android:visibility="gone"
-            app:cornerRadius="18dp"
-            app:strokeColor="@color/error" />
+        <!-- Botones de acción: Reprogramar + Cancelar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnReprogramar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:text="Reprogramar"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:textColor="@color/primary"
+                android:visibility="gone"
+                app:cornerRadius="18dp"
+                app:strokeColor="@color/primary"
+                app:icon="@android:drawable/ic_menu_edit"
+                app:iconSize="16dp"
+                app:iconGravity="textStart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancelar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Cancelar cita"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:textColor="@color/error"
+                android:visibility="gone"
+                app:cornerRadius="18dp"
+                app:strokeColor="@color/error" />
+
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

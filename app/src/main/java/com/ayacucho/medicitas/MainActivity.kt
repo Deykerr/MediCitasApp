@@ -13,9 +13,9 @@ import androidx.lifecycle.ViewModelProvider
 import com.ayacucho.medicitas.view.admin.AdminHomeActivity
 import com.ayacucho.medicitas.view.auth.BienvenidaActivity
 import com.ayacucho.medicitas.view.doctor.MedicoHomeActivity
+import com.ayacucho.medicitas.view.doctor.RecepcionistaHomeActivity
 import com.ayacucho.medicitas.view.patient.PacienteHomeActivity
 import com.ayacucho.medicitas.viewmodel.AuthViewModel
-
 import com.ayacucho.medicitas.utils.NetworkUtils
 
 /**
@@ -87,6 +87,14 @@ class MainActivity : AppCompatActivity() {
             if (navegar) {
                 authViewModel.navegacionAdminCompletada()
                 startActivity(Intent(this, AdminHomeActivity::class.java))
+                finish()
+            }
+        }
+
+        authViewModel.navegarRecepcionista.observe(this) { navegar ->
+            if (navegar) {
+                authViewModel.navegacionRecepcionistaCompletada()
+                startActivity(Intent(this, RecepcionistaHomeActivity::class.java))
                 finish()
             }
         }

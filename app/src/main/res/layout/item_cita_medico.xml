@@ -93,49 +93,28 @@
             android:gravity="center">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAtendida"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="1"
-                android:text="Atendido"
+                android:id="@+id/btnIniciarConsulta"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="Iniciar Consulta"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFinalizarConsulta"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:text="Finalizar"
                 android:textAllCaps="false"
                 android:textSize="12sp"
                 android:textColor="@color/success"
-                app:icon="@android:drawable/checkbox_on_background"
-                app:iconTint="@color/success"
-                app:iconSize="16dp"
-                app:rippleColor="@color/success" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNoAsistio"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="1"
-                android:text="No asistió"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                android:textColor="@color/warning"
-                app:icon="@android:drawable/ic_menu_help"
-                app:iconTint="@color/warning"
-                app:iconSize="16dp"
-                app:rippleColor="@color/warning" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCancelar"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="1"
-                android:text="Cancelar"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                android:textColor="@color/error"
-                app:icon="@android:drawable/ic_menu_close_clear_cancel"
-                app:iconTint="@color/error"
-                app:iconSize="16dp"
-                app:rippleColor="@color/error" />
+                app:strokeColor="@color/success"
+                app:cornerRadius="8dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Botón Crear Tratamiento (visible en citas Atendidas) -->

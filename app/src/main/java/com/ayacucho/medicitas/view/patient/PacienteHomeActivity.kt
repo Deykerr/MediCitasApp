@@ -82,6 +82,35 @@ class PacienteHomeActivity : AppCompatActivity() {
 
         solicitarPermisoNotificaciones()
         iniciarListenerCitas()
+        viewModel.cargarMisCitas()
+        observarCitaHoy()
+    }
+
+    private fun observarCitaHoy() {
+        val cardCola = findViewById<MaterialCardView>(R.id.cardColaEspera)
+        val tvInfo = findViewById<TextView>(R.id.tvInfoCitaHoy)
+        val tvTurno = findViewById<TextView>(R.id.tvTurnoEspera)
+        val tvTiempo = findViewById<TextView>(R.id.tvTiempoEspera)
+
+        viewModel.citaHoy.observe(this) { cita ->
+            if (cita != null && cita.estadoCita != Constants.ESTADO_CITA_CANCELADA) {
+                cardCola.visibility = android.view.View.VISIBLE
+                tvInfo.text = "${cita.nombreEspecialidad} — ${cita.hora}"
+                
+                if (cita.estadoCita == Constants.ESTADO_CITA_ATENDIDA) {
+                    tvTurno.text = "¡Es tu turno!"
+                    tvTurno.setTextColor(ContextCompat.getColor(this, R.color.primary))
+                    tvTiempo.text = "Pasa al consultorio del Dr. ${cita.nombreMedico}"
+                } else {
+                    tvTurno.text = "En espera"
+                    tvTurno.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+                    // Simulación de tiempo: 10-25 min
+                    tvTiempo.text = "Tiempo estimado: 15 min"
+                }
+            } else {
+                cardCola.visibility = android.view.View.GONE
+            }
+        }
     }
 
     private fun iniciarListenerCitas() {

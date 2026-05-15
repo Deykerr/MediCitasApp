@@ -25,6 +25,7 @@ class BienvenidaActivity : AppCompatActivity() {
         const val ROL_PACIENTE = "paciente"
         const val ROL_MEDICO = "medico"
         const val ROL_ADMIN = "admin"
+        const val ROL_RECEPCIONISTA = "recepcionista"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,9 +41,10 @@ class BienvenidaActivity : AppCompatActivity() {
 
         val cardPaciente = findViewById<CardView>(R.id.cardPaciente)
         val cardMedico = findViewById<CardView>(R.id.cardMedico)
+        val cardRecepcionista = findViewById<CardView>(R.id.cardRecepcionista)
         val cardAdmin = findViewById<CardView>(R.id.cardAdmin)
 
-        animarEntrada(cardPaciente, cardMedico, cardAdmin)
+        animarEntrada(cardPaciente, cardMedico, cardRecepcionista, cardAdmin)
 
         cardPaciente.setOnClickListener {
             animarClickYNavegar(it, ROL_PACIENTE)
@@ -50,6 +52,10 @@ class BienvenidaActivity : AppCompatActivity() {
 
         cardMedico.setOnClickListener {
             animarClickYNavegar(it, ROL_MEDICO)
+        }
+
+        cardRecepcionista.setOnClickListener {
+            animarClickYNavegar(it, ROL_RECEPCIONISTA)
         }
 
         cardAdmin.setOnClickListener {

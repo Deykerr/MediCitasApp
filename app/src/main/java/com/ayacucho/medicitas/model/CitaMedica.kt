@@ -23,7 +23,8 @@ data class CitaMedica(
     val idCita: String = "",             // ID autogenerado por Firestore
     val fecha: String = "",              // Formato "dd/MM/yyyy"
     val hora: String = "",               // Formato "HH:mm"
-    val estadoCita: String = "Reservada", // Reservada, Cancelada, Atendida, No Asistió
+    val estadoCita: String = "Pendiente", // Pendiente, Confirmada, Reprogramada, Cancelada, Atendida, No Asistio
+    val estadoAsistencia: String = "Programado", // Programado, Llego, En Espera, En Consulta, Finalizado
     val motivoConsulta: String = "",
     val idPaciente: String = "",         // Referencia al paciente
     val nombrePaciente: String = "",     // Desnormalizado para visualización rápida (RF05.2)
@@ -37,5 +38,7 @@ data class CitaMedica(
     val montoPago: Double = 0.0,         // Monto cobrado por la consulta
     val estadoPago: String = "Pendiente", // "Pendiente", "Pagado", "Reembolsado"
     val metodoPago: String = "",         // "Visa", "Mastercard", "Efectivo"
-    val referenciaPago: String = ""      // Código de transacción simulado
+    val referenciaPago: String = "",     // Código de transacción simulado
+    val motivoCancelacion: String = "",  // Razón de la cancelación (si aplica)
+    val idSlot: String = ""              // Referencia al SlotHorario
 )

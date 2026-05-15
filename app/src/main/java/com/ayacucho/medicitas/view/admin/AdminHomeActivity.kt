@@ -46,6 +46,10 @@ class AdminHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, GestionHorariosActivity::class.java))
         }
 
+        findViewById<MaterialCardView>(R.id.cardReportes).setOnClickListener {
+            startActivity(Intent(this, AdminReportesActivity::class.java))
+        }
+
         // Cerrar sesión (RF01.5)
         findViewById<MaterialButton>(R.id.btnCerrarSesion).setOnClickListener {
             AlertDialog.Builder(this)

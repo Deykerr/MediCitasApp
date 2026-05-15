@@ -22,6 +22,7 @@ import java.util.UUID
 class AdminRepository {
 
     private val db = FirebaseFirestore.getInstance()
+    private val auditoria = AuditoriaRepository()
 
     // ==================== ESPECIALIDADES (RF06.1) ====================
 
@@ -38,7 +39,10 @@ class AdminRepository {
             precioConsulta = precioConsulta
         )
         db.collection(Constants.COLLECTION_ESPECIALIDADES).document(id).set(nueva)
-            .addOnSuccessListener { onSuccess() }
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("CREAR_ESPECIALIDAD", "Especialidad", id, "Nombre: $nombre")
+                onSuccess() 
+            }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al agregar especialidad") }
     }
 
@@ -65,7 +69,10 @@ class AdminRepository {
             "precioConsulta" to precioConsulta
         )
         db.collection(Constants.COLLECTION_ESPECIALIDADES).document(id).update(datos)
-            .addOnSuccessListener { onSuccess() }
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("EDITAR_ESPECIALIDAD", "Especialidad", id, "Nombre: $nombre")
+                onSuccess() 
+            }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al editar especialidad") }
     }
 
@@ -75,7 +82,10 @@ class AdminRepository {
         // Eliminación lógica: cambiar estado a Inactivo
         db.collection(Constants.COLLECTION_ESPECIALIDADES).document(id)
             .update("estado", Constants.ESTADO_INACTIVO)
-            .addOnSuccessListener { onSuccess() }
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("ELIMINAR_ESPECIALIDAD", "Especialidad", id, "Eliminación lógica")
+                onSuccess() 
+            }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al eliminar especialidad") }
     }
 
@@ -136,7 +146,10 @@ class AdminRepository {
                 )
 
                 db.collection(Constants.COLLECTION_PERSONAL_SALUD).document(uidMedico).set(nuevoMedico)
-                    .addOnSuccessListener { onSuccess() }
+                    .addOnSuccessListener { 
+                        auditoria.registrarAccion("CREAR_MEDICO", "PersonalSalud", uidMedico, "Nombre: $nombres $apellidos, Especialidad: $nombreEspecialidad")
+                        onSuccess() 
+                    }
                     .addOnFailureListener { e ->
                         onFailure(e.localizedMessage ?: "Error al guardar datos del médico")
                     }
@@ -169,7 +182,10 @@ class AdminRepository {
     ) {
         db.collection(Constants.COLLECTION_PERSONAL_SALUD).document(id)
             .update("estado", Constants.ESTADO_INACTIVO)
-            .addOnSuccessListener { onSuccess() }
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("DESACTIVAR_MEDICO", "PersonalSalud", id, "Baja lógica")
+                onSuccess() 
+            }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al desactivar médico") }
     }
 
@@ -180,9 +196,9 @@ class AdminRepository {
         duracionCitaMinutos: Int, idPersonal: String,
         onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
-        // Calcular cupos automáticamente a partir de la duración
-        val cuposCalculados = calcularSlots(horaInicio, horaFin, duracionCitaMinutos)
-        if (cuposCalculados <= 0) {
+        // Generar lista de Slots
+        val slotsGenerados = generarSlots(fecha, horaInicio, horaFin, duracionCitaMinutos, idPersonal)
+        if (slotsGenerados.isEmpty()) {
             onFailure("No se pueden crear slots con los horarios indicados")
             return
         }
@@ -195,14 +211,66 @@ class AdminRepository {
             horaInicio = horaInicio,
             horaFin = horaFin,
             duracionCitaMinutos = duracionCitaMinutos,
-            cuposDisponibles = cuposCalculados,
-            cuposTotales = cuposCalculados,
+            cuposDisponibles = slotsGenerados.size,
+            cuposTotales = slotsGenerados.size,
             estado = Constants.ESTADO_HORARIO_DISPONIBLE,
             idPersonal = idPersonal
         )
-        db.collection(Constants.COLLECTION_HORARIOS).document(id).set(nuevo)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al agregar horario") }
+
+        val batch = db.batch()
+        val horarioRef = db.collection(Constants.COLLECTION_HORARIOS).document(id)
+        batch.set(horarioRef, nuevo)
+
+        // Asignar idHorario a los slots y agregarlos al batch
+        for (slot in slotsGenerados) {
+            val slotFinal = slot.copy(idHorario = id)
+            val slotRef = db.collection("slots_horario").document(slotFinal.idSlot)
+            batch.set(slotRef, slotFinal)
+        }
+
+        batch.commit()
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("CREAR_HORARIO", "Horario", id, "Fecha: $fecha, Médico ID: $idPersonal, Slots: ${slotsGenerados.size}")
+                onSuccess() 
+            }
+            .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al agregar horario y slots") }
+    }
+
+    /**
+     * Genera la lista de SlotHorario a partir de la configuración.
+     */
+    private fun generarSlots(fecha: String, horaInicio: String, horaFin: String, duracionMinutos: Int, idMedico: String): List<SlotHorario> {
+        val result = mutableListOf<SlotHorario>()
+        try {
+            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            val inicio = sdf.parse(horaInicio) ?: return result
+            val fin = sdf.parse(horaFin) ?: return result
+            if (duracionMinutos <= 0) return result
+
+            val cal = java.util.Calendar.getInstance()
+            cal.time = inicio
+
+            val calFin = java.util.Calendar.getInstance()
+            calFin.time = fin
+
+            while (cal.before(calFin)) {
+                val hInicioStr = sdf.format(cal.time)
+                cal.add(java.util.Calendar.MINUTE, duracionMinutos)
+                if (cal.after(calFin)) break // No crear slot que termine después de horaFin
+                val hFinStr = sdf.format(cal.time)
+
+                val idSlot = UUID.randomUUID().toString()
+                result.add(SlotHorario(
+                    idSlot = idSlot,
+                    idMedico = idMedico,
+                    fecha = fecha,
+                    horaInicio = hInicioStr,
+                    horaFin = hFinStr,
+                    estado = "Disponible"
+                ))
+            }
+        } catch (e: Exception) { /* Ignorar */ }
+        return result
     }
 
     /**
@@ -237,7 +305,10 @@ class AdminRepository {
         id: String, onSuccess: () -> Unit, onFailure: (String) -> Unit
     ) {
         db.collection(Constants.COLLECTION_HORARIOS).document(id).delete()
-            .addOnSuccessListener { onSuccess() }
+            .addOnSuccessListener { 
+                auditoria.registrarAccion("ELIMINAR_HORARIO", "Horario", id, "Eliminación física")
+                onSuccess() 
+            }
             .addOnFailureListener { e -> onFailure(e.localizedMessage ?: "Error al eliminar horario") }
     }
 }

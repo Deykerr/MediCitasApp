@@ -90,26 +90,15 @@ class MedicoHomeActivity : AppCompatActivity() {
 
         // Configurar RecyclerView
         citasAdapter = CitasMedicoAdapter(listaCitas,
-            onAtendida = { cita ->
+            onIniciarConsulta = { cita ->
                 AlertDialog.Builder(this)
-                    .setTitle("Confirmar")
-                    .setMessage("¿Marcar cita de ${cita.nombrePaciente} como ATENDIDA?")
-                    .setPositiveButton("Sí") { _, _ -> viewModel.marcarComoAtendida(cita.idCita) }
+                    .setTitle("Iniciar Consulta")
+                    .setMessage("¿Deseas iniciar la consulta con ${cita.nombrePaciente}?")
+                    .setPositiveButton("Sí") { _, _ -> viewModel.iniciarConsulta(cita.idCita) }
                     .setNegativeButton("No", null).show()
             },
-            onNoAsistio = { cita ->
-                AlertDialog.Builder(this)
-                    .setTitle("Confirmar")
-                    .setMessage("¿Marcar que ${cita.nombrePaciente} NO ASISTIÓ?")
-                    .setPositiveButton("Sí") { _, _ -> viewModel.marcarComoNoAsistio(cita.idCita) }
-                    .setNegativeButton("No", null).show()
-            },
-            onCancelar = { cita ->
-                AlertDialog.Builder(this)
-                    .setTitle("Confirmar")
-                    .setMessage("¿CANCELAR la cita de ${cita.nombrePaciente}?")
-                    .setPositiveButton("Sí") { _, _ -> viewModel.marcarComoCancelada(cita.idCita) }
-                    .setNegativeButton("No", null).show()
+            onFinalizarConsulta = { cita ->
+                mostrarDialogAtencionMedica(cita)
             },
             onCrearTratamiento = { cita ->
                 mostrarDialogTratamiento(cita)
@@ -158,6 +147,35 @@ class MedicoHomeActivity : AppCompatActivity() {
                 val precio = etPrecio.text.toString().toDoubleOrNull() ?: 0.0
 
                 viewModel.crearPlanTratamiento(cita, diagnostico, descripcion, sesiones, precio)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun mostrarDialogAtencionMedica(cita: CitaMedica) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_atencion_medica, null)
+        val etSintomas = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etSintomas)
+        val etDiagnostico = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDiagnostico)
+        val etIndicaciones = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etIndicaciones)
+        val etObservaciones = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etObservaciones)
+
+        AlertDialog.Builder(this)
+            .setTitle("Atención - ${cita.nombrePaciente}")
+            .setView(dialogView)
+            .setPositiveButton("Finalizar y Guardar") { _, _ ->
+                val atencion = com.ayacucho.medicitas.model.AtencionMedica(
+                    idAtencion = java.util.UUID.randomUUID().toString(),
+                    idCita = cita.idCita,
+                    idPaciente = cita.idPaciente,
+                    idMedico = cita.idPersonal,
+                    motivoConsulta = cita.motivoConsulta,
+                    sintomas = etSintomas.text.toString().trim(),
+                    diagnostico = etDiagnostico.text.toString().trim(),
+                    indicaciones = etIndicaciones.text.toString().trim(),
+                    observaciones = etObservaciones.text.toString().trim(),
+                    fechaAtencion = com.ayacucho.medicitas.utils.DateUtils.fechaHoraActual()
+                )
+                viewModel.registrarAtencionMedica(atencion)
             }
             .setNegativeButton("Cancelar", null)
             .show()
@@ -234,9 +252,8 @@ class MedicoHomeActivity : AppCompatActivity() {
 
 class CitasMedicoAdapter(
     private val citas: List<CitaMedica>,
-    private val onAtendida: (CitaMedica) -> Unit,
-    private val onNoAsistio: (CitaMedica) -> Unit,
-    private val onCancelar: (CitaMedica) -> Unit,
+    private val onIniciarConsulta: (CitaMedica) -> Unit,
+    private val onFinalizarConsulta: (CitaMedica) -> Unit,
     private val onCrearTratamiento: (CitaMedica) -> Unit
 ) : RecyclerView.Adapter<CitasMedicoAdapter.ViewHolder>() {
 
@@ -246,9 +263,8 @@ class CitasMedicoAdapter(
         val tvNombre: TextView = view.findViewById(R.id.tvNombrePaciente)
         val tvDni: TextView = view.findViewById(R.id.tvDniPaciente)
         val tvMotivo: TextView = view.findViewById(R.id.tvMotivo)
-        val btnAtendida: MaterialButton = view.findViewById(R.id.btnAtendida)
-        val btnNoAsistio: MaterialButton = view.findViewById(R.id.btnNoAsistio)
-        val btnCancelar: MaterialButton = view.findViewById(R.id.btnCancelar)
+        val btnIniciarConsulta: MaterialButton = view.findViewById(R.id.btnIniciarConsulta)
+        val btnFinalizarConsulta: MaterialButton = view.findViewById(R.id.btnFinalizarConsulta)
         val layoutAcciones: View = view.findViewById(R.id.layoutAcciones)
         val dividerAcciones: View = view.findViewById(R.id.dividerAcciones)
         val btnCrearTratamiento: MaterialButton = view.findViewById(R.id.btnCrearTratamiento)
@@ -272,19 +288,24 @@ class CitasMedicoAdapter(
         // Configurar badge de estado con colores
         configurarEstado(holder.tvEstado, cita.estadoCita)
 
-        // Mostrar/ocultar botones según el estado actual
-        val esPendiente = cita.estadoCita == Constants.ESTADO_CITA_RESERVADA
-        holder.layoutAcciones.visibility = if (esPendiente) View.VISIBLE else View.GONE
-        holder.dividerAcciones.visibility = if (esPendiente) View.VISIBLE else View.GONE
+        // Mostrar/ocultar botones según el estado de asistencia
+        val estaEnConsulta = cita.estadoAsistencia == Constants.ESTADO_ASISTENCIA_EN_CONSULTA
+        val llegoOEnEspera = cita.estadoAsistencia == Constants.ESTADO_ASISTENCIA_LLEGO || cita.estadoAsistencia == Constants.ESTADO_ASISTENCIA_EN_ESPERA
+        val esConfirmada = cita.estadoCita == Constants.ESTADO_CITA_CONFIRMADA || cita.estadoCita == Constants.ESTADO_CITA_PENDIENTE
+
+        holder.layoutAcciones.visibility = if (esConfirmada && (llegoOEnEspera || estaEnConsulta)) View.VISIBLE else View.GONE
+        holder.dividerAcciones.visibility = holder.layoutAcciones.visibility
+
+        holder.btnIniciarConsulta.visibility = if (llegoOEnEspera) View.VISIBLE else View.GONE
+        holder.btnFinalizarConsulta.visibility = if (estaEnConsulta) View.VISIBLE else View.GONE
 
         // Botón crear tratamiento: solo visible en citas Atendidas
         val esAtendida = cita.estadoCita == Constants.ESTADO_CITA_ATENDIDA
         holder.btnCrearTratamiento.visibility = if (esAtendida) View.VISIBLE else View.GONE
 
         // Listeners de los botones
-        holder.btnAtendida.setOnClickListener { onAtendida(cita) }
-        holder.btnNoAsistio.setOnClickListener { onNoAsistio(cita) }
-        holder.btnCancelar.setOnClickListener { onCancelar(cita) }
+        holder.btnIniciarConsulta.setOnClickListener { onIniciarConsulta(cita) }
+        holder.btnFinalizarConsulta.setOnClickListener { onFinalizarConsulta(cita) }
         holder.btnCrearTratamiento.setOnClickListener { onCrearTratamiento(cita) }
     }
 
@@ -292,7 +313,7 @@ class CitasMedicoAdapter(
         tvEstado.text = estado
 
         val (textColor, bgColor) = when (estado) {
-            Constants.ESTADO_CITA_RESERVADA -> Pair("#1565C0", "#E3F2FD")
+            Constants.ESTADO_CITA_CONFIRMADA, Constants.ESTADO_CITA_PENDIENTE -> Pair("#1565C0", "#E3F2FD")
             Constants.ESTADO_CITA_ATENDIDA -> Pair("#2E7D32", "#E8F5E9")
             Constants.ESTADO_CITA_NO_ASISTIO -> Pair("#E65100", "#FFF3E0")
             Constants.ESTADO_CITA_CANCELADA -> Pair("#C62828", "#FFEBEE")

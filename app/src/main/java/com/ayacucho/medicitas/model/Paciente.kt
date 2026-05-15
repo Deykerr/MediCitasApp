@@ -23,5 +23,12 @@ data class Paciente(
     val correoElectronico: String = "",
     val estadoCuenta: String = "Activo", // Activo, Inactivo
     val fechaRegistro: String = "",    // Formato "dd/MM/yyyy HH:mm"
+    
+    // Campos extendidos (Perfil Clínico)
+    val sexo: String = "",
+    val direccion: String = "",
+    val contactoEmergencia: String = "",
+    val alergias: String = "",
+    
     val rol: String = "Paciente"       // Siempre "Paciente" para esta entidad (RF01.6)
 )

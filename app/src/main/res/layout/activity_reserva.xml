@@ -162,6 +162,31 @@
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false" />
 
+                <!-- Selección de paciente (Titular o Familiar) -->
+                <LinearLayout
+                    android:id="@+id/llSeleccionPaciente"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="¿Para quién es la cita?"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <Spinner
+                        android:id="@+id/spinnerPacientes"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_border_rounded" />
+                </LinearLayout>
+
                 <!-- Campo motivo de consulta -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilMotivo"

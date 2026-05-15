@@ -110,6 +110,7 @@ class AuthRepository {
         onRoutePaciente: () -> Unit,
         onRouteMedico: () -> Unit,
         onRouteAdmin: () -> Unit,
+        onRouteRecepcionista: () -> Unit,
         onFailure: (String) -> Unit
     ) {
         auth.signInWithEmailAndPassword(correo, contrasena)
@@ -118,7 +119,7 @@ class AuthRepository {
                     onFailure("Error al obtener el ID del usuario")
                     return@addOnSuccessListener
                 }
-                determinarRolYRedirigir(uid, onRoutePaciente, onRouteMedico, onRouteAdmin, onFailure)
+                determinarRolYRedirigir(uid, onRoutePaciente, onRouteMedico, onRouteAdmin, onRouteRecepcionista, onFailure)
             }
             .addOnFailureListener { e ->
                 val mensaje = when {
@@ -145,6 +146,7 @@ class AuthRepository {
         onRoutePaciente: () -> Unit,
         onRouteMedico: () -> Unit,
         onRouteAdmin: () -> Unit,
+        onRouteRecepcionista: () -> Unit,
         onFailure: (String) -> Unit
     ) {
         // 1. Buscar en pacientes
@@ -157,7 +159,12 @@ class AuthRepository {
                     db.collection(Constants.COLLECTION_PERSONAL_SALUD).document(uid).get()
                         .addOnSuccessListener { docMedico ->
                             if (docMedico.exists()) {
-                                onRouteMedico()
+                                val rol = docMedico.getString("rol") ?: Constants.ROL_MEDICO
+                                if (rol == Constants.ROL_RECEPCIONISTA) {
+                                    onRouteRecepcionista()
+                                } else {
+                                    onRouteMedico()
+                                }
                             } else {
                                 // 3. Buscar en administradores
                                 db.collection(Constants.COLLECTION_ADMINISTRADORES).document(uid).get()

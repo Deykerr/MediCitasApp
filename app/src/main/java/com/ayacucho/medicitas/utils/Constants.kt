@@ -20,12 +20,22 @@ object Constants {
     const val ROL_PACIENTE = "Paciente"
     const val ROL_MEDICO = "Medico"
     const val ROL_ADMIN = "Admin"
+    const val ROL_RECEPCIONISTA = "Recepcionista"
 
     // ==================== Estados de Cita (RF04, RF05.3, RF08.1) ====================
-    const val ESTADO_CITA_RESERVADA = "Reservada"
+    const val ESTADO_CITA_PENDIENTE = "Pendiente"
+    const val ESTADO_CITA_CONFIRMADA = "Confirmada"
+    const val ESTADO_CITA_REPROGRAMADA = "Reprogramada"
     const val ESTADO_CITA_CANCELADA = "Cancelada"
     const val ESTADO_CITA_ATENDIDA = "Atendida"
     const val ESTADO_CITA_NO_ASISTIO = "No Asistio"
+
+    // ==================== Estados de Asistencia ====================
+    const val ESTADO_ASISTENCIA_PROGRAMADO = "Programado"
+    const val ESTADO_ASISTENCIA_LLEGO = "Llego"
+    const val ESTADO_ASISTENCIA_EN_ESPERA = "En Espera"
+    const val ESTADO_ASISTENCIA_EN_CONSULTA = "En Consulta"
+    const val ESTADO_ASISTENCIA_FINALIZADO = "Finalizado"
 
     // ==================== Estados de Cuenta ====================
     const val ESTADO_ACTIVO = "Activo"
@@ -39,6 +49,11 @@ object Constants {
     const val ESTADO_PAGO_PENDIENTE = "Pendiente"
     const val ESTADO_PAGO_PAGADO = "Pagado"
     const val ESTADO_PAGO_REEMBOLSADO = "Reembolsado"
+
+    // Métodos de Pago
+    const val METODO_PAGO_TARJETA = "Tarjeta"
+    const val METODO_PAGO_YAPE = "Yape"
+    const val METODO_PAGO_PLIN = "Plin"
 
     // ==================== Tratamientos y Sesiones ====================
     const val COLLECTION_TRATAMIENTOS = "tratamientos"

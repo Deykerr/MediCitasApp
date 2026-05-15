@@ -124,7 +124,34 @@ class MedicoViewModel : ViewModel() {
             onSuccess = {
                 _isLoading.value = false
                 _mensaje.value = "Cita marcada como: $nuevoEstado"
-                // El SnapshotListener actualizará la lista automáticamente
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun iniciarConsulta(idCita: String) {
+        _isLoading.value = true
+        medicoRepository.actualizarEstadoAsistencia(idCita, Constants.ESTADO_ASISTENCIA_EN_CONSULTA,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Consulta iniciada"
+            },
+            onFailure = { msg ->
+                _isLoading.value = false
+                _mensaje.value = msg
+            }
+        )
+    }
+
+    fun registrarAtencionMedica(atencion: com.ayacucho.medicitas.model.AtencionMedica) {
+        _isLoading.value = true
+        medicoRepository.registrarAtencionMedica(atencion,
+            onSuccess = {
+                _isLoading.value = false
+                _mensaje.value = "Atención médica guardada exitosamente"
             },
             onFailure = { msg ->
                 _isLoading.value = false
@@ -185,7 +212,7 @@ class MedicoViewModel : ViewModel() {
     private fun actualizarEstadisticas(citas: List<CitaMedica>) {
         _totalCitas.value = citas.size
         _citasAtendidas.value = citas.count { it.estadoCita == Constants.ESTADO_CITA_ATENDIDA }
-        _citasPendientes.value = citas.count { it.estadoCita == Constants.ESTADO_CITA_RESERVADA }
+        _citasPendientes.value = citas.count { it.estadoCita == Constants.ESTADO_CITA_CONFIRMADA }
     }
 
     // ==================== UTILIDADES ====================

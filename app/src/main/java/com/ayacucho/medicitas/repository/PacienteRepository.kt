@@ -41,6 +41,51 @@ class PacienteRepository {
             }
     }
 
+    fun actualizarPerfilPaciente(
+        uid: String,
+        datos: Map<String, Any>,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.collection(Constants.COLLECTION_PACIENTES).document(uid)
+            .update(datos)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al actualizar el perfil")
+            }
+    }
+
+    // ==================== DEPENDIENTES ====================
+
+    fun obtenerDependientes(
+        idTitular: String,
+        onSuccess: (List<Dependiente>) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.collection("dependientes")
+            .whereEqualTo("idTitular", idTitular)
+            .get()
+            .addOnSuccessListener { result ->
+                onSuccess(result.toObjects(Dependiente::class.java))
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al obtener familiares asociados")
+            }
+    }
+
+    fun agregarDependiente(
+        dependiente: Dependiente,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.collection("dependientes").document(dependiente.idDependiente)
+            .set(dependiente)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al registrar familiar")
+            }
+    }
+
     // ==================== EXPLORACIÓN EN CASCADA (RF02, RF03) ====================
 
     /**
@@ -82,8 +127,29 @@ class PacienteRepository {
     }
 
     /**
-     * RF03.5: Obtener horarios disponibles de un médico (con cupos > 0 y no bloqueados).
+     * RF03.5: Obtener slots reales de horario disponibles de un médico.
      */
+    fun obtenerSlotsDisponibles(
+        idMedico: String,
+        onSuccess: (List<SlotHorario>) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.collection("slots_horario")
+            .whereEqualTo("idMedico", idMedico)
+            .whereEqualTo("estado", "Disponible")
+            .get()
+            .addOnSuccessListener { result ->
+                val slots = result.toObjects(SlotHorario::class.java)
+                val fechaHoy = DateUtils.fechaActual()
+                val filtrados = slots.filter { compararFechas(it.fecha, fechaHoy) >= 0 }
+                onSuccess(filtrados.sortedWith(compareBy({ it.fecha }, { it.horaInicio })))
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.localizedMessage ?: "Error al obtener horarios")
+            }
+    }
+
+    // Mantenemos obtenerHorariosDisponibles temporalmente por retrocompatibilidad
     fun obtenerHorariosDisponibles(
         idMedico: String,
         onSuccess: (List<Horario>) -> Unit,
@@ -95,11 +161,10 @@ class PacienteRepository {
             .get()
             .addOnSuccessListener { result ->
                 val horarios = result.toObjects(Horario::class.java)
-                // Solo mostrar horarios con cupos disponibles y fecha >= hoy
                 val fechaHoy = DateUtils.fechaActual()
                 val filtrados = horarios.filter {
                     it.cuposDisponibles > 0 && compararFechas(it.fecha, fechaHoy) >= 0
-                }.sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
+                }.sortedBy { it.fecha }
                 onSuccess(filtrados)
             }
             .addOnFailureListener { e ->
@@ -120,9 +185,8 @@ class PacienteRepository {
      * 3. Crear documento de la cita con datos de pago
      * 4. Decrementar cuposDisponibles del horario
      */
-    fun confirmarReserva(
-        horarioSeleccionado: Horario,
-        horaSeleccionada: String,
+    fun confirmarReservaSlot(
+        slotSeleccionado: SlotHorario,
         motivo: String,
         paciente: Paciente,
         medico: PersonalSalud,
@@ -130,17 +194,19 @@ class PacienteRepository {
         montoPago: Double,
         metodoPago: String,
         referenciaPago: String,
+        pacienteRealNombre: String,
+        pacienteRealDni: String,
         onSuccess: (String) -> Unit,      // Devuelve el ID de la cita creada
         onFailure: (String) -> Unit
     ) {
         val uidPaciente = paciente.idPaciente
 
-        // RF04.3: Verificar duplicados (mismo paciente + mismo médico + misma fecha)
+        // Verificar duplicados
         db.collection(Constants.COLLECTION_CITAS)
             .whereEqualTo("idPaciente", uidPaciente)
             .whereEqualTo("idPersonal", medico.idPersonal)
-            .whereEqualTo("fecha", horarioSeleccionado.fecha)
-            .whereEqualTo("estadoCita", Constants.ESTADO_CITA_RESERVADA)
+            .whereEqualTo("fecha", slotSeleccionado.fecha)
+            .whereEqualTo("estadoCita", Constants.ESTADO_CITA_CONFIRMADA)
             .get()
             .addOnSuccessListener { existentes ->
                 if (!existentes.isEmpty) {
@@ -148,68 +214,74 @@ class PacienteRepository {
                     return@addOnSuccessListener
                 }
 
-                // RF04.2: Verificar cupos en tiempo real
-                db.collection(Constants.COLLECTION_HORARIOS)
-                    .document(horarioSeleccionado.idHorario).get()
-                    .addOnSuccessListener { docHorario ->
-                        val cuposActuales = docHorario.getLong("cuposDisponibles")?.toInt() ?: 0
-                        if (cuposActuales <= 0) {
-                            onFailure("Lo sentimos, ya no hay cupos disponibles para este horario")
-                            return@addOnSuccessListener
-                        }
-
-                        // Crear la cita con campos desnormalizados y datos de pago (RF04.4)
-                        val idCita = UUID.randomUUID().toString()
-                        val nuevaCita = CitaMedica(
-                            idCita = idCita,
-                            fecha = horarioSeleccionado.fecha,
-                            hora = horaSeleccionada,
-                            estadoCita = Constants.ESTADO_CITA_RESERVADA,
-                            motivoConsulta = motivo.trim(),
-                            idPaciente = uidPaciente,
-                            nombrePaciente = "${paciente.nombres} ${paciente.apellidos}",
-                            dniPaciente = paciente.dni,
-                            idPersonal = medico.idPersonal,
-                            nombreMedico = "${medico.nombres} ${medico.apellidos}",
-                            idEspecialidad = especialidad.idEspecialidad,
-                            nombreEspecialidad = especialidad.nombreEspecialidad,
-                            fechaCreacion = DateUtils.fechaHoraActual(),
-                            montoPago = montoPago,
-                            estadoPago = Constants.ESTADO_PAGO_PAGADO,
-                            metodoPago = metodoPago,
-                            referenciaPago = referenciaPago
-                        )
-
-                        // Guardar cita + decrementar cupos en batch + guardar notificacion
-                        val batch = db.batch()
-                        val citaRef = db.collection(Constants.COLLECTION_CITAS).document(idCita)
-                        val horarioRef = db.collection(Constants.COLLECTION_HORARIOS)
-                            .document(horarioSeleccionado.idHorario)
-
-                        val idNotif = UUID.randomUUID().toString()
-                        val notifRef = db.collection(Constants.COLLECTION_NOTIFICACIONES).document(idNotif)
-                        val tituloNotif = "¡Cita Confirmada!"
-                        val mensajeNotif = "Tu cita para el ${horarioSeleccionado.fecha} a las $horaSeleccionada ha sido registrada. Pago: S/. ${"%.2f".format(montoPago)} ($metodoPago)"
-                        val registroNotificacion = Notificacion(
-                            idNotificacion = idNotif,
-                            titulo = tituloNotif,
-                            mensaje = mensajeNotif,
-                            tipo = "CONFIRMACION",
-                            fechaHora = DateUtils.fechaHoraActual(),
-                            estadoLectura = "No Leído",
-                            idUsuario = uidPaciente,
-                            idCita = idCita
-                        )
-
-                        batch.set(citaRef, nuevaCita)
-                        batch.set(notifRef, registroNotificacion)
-                        batch.update(horarioRef, "cuposDisponibles", FieldValue.increment(-1))
-                        batch.commit()
-                            .addOnSuccessListener { onSuccess(idCita) }
-                            .addOnFailureListener { e ->
-                                onFailure(e.localizedMessage ?: "Error al confirmar la reserva")
-                            }
+                // Transacción para verificar y reservar el Slot
+                db.runTransaction { transaction ->
+                    val slotRef = db.collection("slots_horario").document(slotSeleccionado.idSlot)
+                    val snapshot = transaction.get(slotRef)
+                    
+                    val estado = snapshot.getString("estado")
+                    if (estado != "Disponible") {
+                        throw Exception("Lo sentimos, este horario ya no está disponible")
                     }
+
+                    val idCita = UUID.randomUUID().toString()
+                    val nuevaCita = CitaMedica(
+                        idCita = idCita,
+                        fecha = slotSeleccionado.fecha,
+                        hora = slotSeleccionado.horaInicio,
+                        estadoCita = Constants.ESTADO_CITA_CONFIRMADA,
+                        estadoAsistencia = Constants.ESTADO_ASISTENCIA_PROGRAMADO,
+                        motivoConsulta = motivo.trim(),
+                        idPaciente = uidPaciente,
+                        nombrePaciente = pacienteRealNombre,
+                        dniPaciente = pacienteRealDni,
+                        idPersonal = medico.idPersonal,
+                        nombreMedico = "${medico.nombres} ${medico.apellidos}",
+                        idEspecialidad = especialidad.idEspecialidad,
+                        nombreEspecialidad = especialidad.nombreEspecialidad,
+                        fechaCreacion = DateUtils.fechaHoraActual(),
+                        montoPago = montoPago,
+                        estadoPago = Constants.ESTADO_PAGO_PAGADO,
+                        metodoPago = metodoPago,
+                        referenciaPago = referenciaPago,
+                        idSlot = slotSeleccionado.idSlot // IMPORTANTE: vincular la cita al slot
+                    )
+
+                    val citaRef = db.collection(Constants.COLLECTION_CITAS).document(idCita)
+                    val idNotif = UUID.randomUUID().toString()
+                    val notifRef = db.collection(Constants.COLLECTION_NOTIFICACIONES).document(idNotif)
+                    val registroNotificacion = Notificacion(
+                        idNotificacion = idNotif,
+                        titulo = "¡Cita Confirmada!",
+                        mensaje = "La cita para $pacienteRealNombre el ${slotSeleccionado.fecha} a las ${slotSeleccionado.horaInicio} ha sido registrada. Pago: S/. ${"%.2f".format(montoPago)} ($metodoPago)",
+                        tipo = "CONFIRMACION",
+                        fechaHora = DateUtils.fechaHoraActual(),
+                        estadoLectura = "No Leído",
+                        idUsuario = uidPaciente,
+                        idCita = idCita
+                    )
+
+                    transaction.update(slotRef, "estado", "Reservado")
+                    transaction.update(slotRef, "idCita", idCita)
+                    transaction.set(citaRef, nuevaCita)
+                    transaction.set(notifRef, registroNotificacion)
+
+                    // También decrementar cupos en el Horario maestro (opcional, pero util para reportes rápidos)
+                    val horarioRef = db.collection(Constants.COLLECTION_HORARIOS).document(slotSeleccionado.idHorario)
+                    transaction.update(horarioRef, "cuposDisponibles", com.google.firebase.firestore.FieldValue.increment(-1))
+
+                    idCita // Devolver idCita de la transacción
+                }.addOnSuccessListener { idCita ->
+                    AuditoriaRepository().registrarAccion(
+                        accion = "CREAR_CITA",
+                        entidadAfectada = "CitaMedica",
+                        idEntidadAfectada = idCita,
+                        detalles = "Cita reservada por paciente $pacienteRealNombre con médico ${medico.nombres} ${medico.apellidos} para el ${slotSeleccionado.fecha}"
+                    )
+                    onSuccess(idCita)
+                }.addOnFailureListener { e ->
+                    onFailure(e.localizedMessage ?: "Error al confirmar la reserva")
+                }
             }
             .addOnFailureListener { e ->
                 onFailure(e.localizedMessage ?: "Error al verificar disponibilidad")
@@ -267,6 +339,7 @@ class PacienteRepository {
      */
     fun cancelarCita(
         cita: CitaMedica,
+        motivo: String,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
@@ -278,11 +351,12 @@ class PacienteRepository {
             .addOnSuccessListener { horarios ->
                 val batch = db.batch()
 
-                // Actualizar estado de la cita y marcar pago como reembolsado
+                // Actualizar estado de la cita y marcar pago como reembolsado, y añadir motivo
                 val citaRef = db.collection(Constants.COLLECTION_CITAS).document(cita.idCita)
                 batch.update(citaRef, mapOf(
                     "estadoCita" to Constants.ESTADO_CITA_CANCELADA,
-                    "estadoPago" to Constants.ESTADO_PAGO_REEMBOLSADO
+                    "estadoPago" to Constants.ESTADO_PAGO_REEMBOLSADO,
+                    "motivoCancelacion" to motivo
                 ))
 
                 // Restaurar cupo si encontramos el horario
@@ -369,52 +443,97 @@ class PacienteRepository {
      */
     fun agendarSesion(
         sesion: SesionTratamiento,
-        horario: Horario,
-        horaSeleccionada: String,
+        slot: SlotHorario,
         montoPago: Double,
         metodoPago: String,
         referenciaPago: String,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
-        // Verificar cupos en tiempo real
-        db.collection(Constants.COLLECTION_HORARIOS)
-            .document(horario.idHorario).get()
-            .addOnSuccessListener { docHorario ->
-                val cuposActuales = docHorario.getLong("cuposDisponibles")?.toInt() ?: 0
-                if (cuposActuales <= 0) {
-                    onFailure("No hay cupos disponibles para este horario")
-                    return@addOnSuccessListener
-                }
+        db.runTransaction { transaction ->
+            val slotRef = db.collection("slots_horario").document(slot.idSlot)
+            val snapshot = transaction.get(slotRef)
+            
+            val estado = snapshot.getString("estado")
+            if (estado != "Disponible") {
+                throw Exception("Lo sentimos, este horario ya no está disponible")
+            }
 
-                val batch = db.batch()
+            val sesionRef = db.collection(Constants.COLLECTION_SESIONES).document(sesion.idSesion)
+            transaction.update(sesionRef, mapOf(
+                "fecha" to slot.fecha,
+                "hora" to slot.horaInicio,
+                "estado" to Constants.ESTADO_SESION_AGENDADA,
+                "precioPagado" to montoPago,
+                "estadoPago" to Constants.ESTADO_PAGO_PAGADO,
+                "metodoPago" to metodoPago,
+                "referenciaPago" to referenciaPago,
+                "idHorario" to slot.idHorario
+            ))
 
-                // Actualizar sesión con datos de agenda y pago
-                val sesionRef = db.collection(Constants.COLLECTION_SESIONES).document(sesion.idSesion)
-                batch.update(sesionRef, mapOf(
-                    "fecha" to horario.fecha,
-                    "hora" to horaSeleccionada,
-                    "estado" to Constants.ESTADO_SESION_AGENDADA,
-                    "precioPagado" to montoPago,
-                    "estadoPago" to Constants.ESTADO_PAGO_PAGADO,
-                    "metodoPago" to metodoPago,
-                    "referenciaPago" to referenciaPago,
-                    "idHorario" to horario.idHorario
-                ))
+            transaction.update(slotRef, "estado", "Reservado")
+            transaction.update(slotRef, "idCita", sesion.idSesion)
 
-                // Decrementar cupo del horario
-                val horarioRef = db.collection(Constants.COLLECTION_HORARIOS).document(horario.idHorario)
-                batch.update(horarioRef, "cuposDisponibles", com.google.firebase.firestore.FieldValue.increment(-1))
+            val horarioRef = db.collection(Constants.COLLECTION_HORARIOS).document(slot.idHorario)
+            transaction.update(horarioRef, "cuposDisponibles", com.google.firebase.firestore.FieldValue.increment(-1))
 
-                batch.commit()
-                    .addOnSuccessListener { onSuccess() }
-                    .addOnFailureListener { e ->
-                        onFailure(e.localizedMessage ?: "Error al agendar sesión")
+            null // return value inside transaction
+        }.addOnSuccessListener {
+            onSuccess()
+        }.addOnFailureListener { e ->
+            onFailure(e.localizedMessage ?: "Error al agendar sesión")
+        }
+    }
+
+    /**
+     * Reprograma una cita: libera el slot anterior y reserva uno nuevo en transaccion atomica.
+     */
+    fun reprogramarCita(
+        cita: CitaMedica,
+        nuevoSlot: SlotHorario,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        db.runTransaction { transaction ->
+            val nuevoSlotRef = db.collection("slots_horario").document(nuevoSlot.idSlot)
+            val nuevoSlotSnap = transaction.get(nuevoSlotRef)
+            if (nuevoSlotSnap.getString("estado") != "Disponible") {
+                throw Exception("Este horario ya no esta disponible, elige otro")
+            }
+
+            val citaRef = db.collection(Constants.COLLECTION_CITAS).document(cita.idCita)
+
+            if (cita.idSlot.isNotBlank() && cita.idSlot != nuevoSlot.idSlot) {
+                val slotAnteriorRef = db.collection("slots_horario").document(cita.idSlot)
+                val slotAnteriorSnap = transaction.get(slotAnteriorRef)
+                if (slotAnteriorSnap.exists()) {
+                    transaction.update(slotAnteriorRef, mapOf("estado" to "Disponible", "idCita" to ""))
+                    val idHorarioAnterior = slotAnteriorSnap.getString("idHorario") ?: ""
+                    if (idHorarioAnterior.isNotBlank()) {
+                        val horarioAnteriorRef = db.collection(Constants.COLLECTION_HORARIOS).document(idHorarioAnterior)
+                        transaction.update(horarioAnteriorRef, "cuposDisponibles", com.google.firebase.firestore.FieldValue.increment(1))
                     }
+                }
             }
-            .addOnFailureListener { e ->
-                onFailure(e.localizedMessage ?: "Error al verificar disponibilidad")
-            }
+
+            transaction.update(nuevoSlotRef, mapOf("estado" to "Reservado", "idCita" to cita.idCita))
+
+            val horarioNuevoRef = db.collection(Constants.COLLECTION_HORARIOS).document(nuevoSlot.idHorario)
+            transaction.update(horarioNuevoRef, "cuposDisponibles", com.google.firebase.firestore.FieldValue.increment(-1))
+
+            transaction.update(citaRef, mapOf(
+                "fecha" to nuevoSlot.fecha,
+                "hora" to nuevoSlot.horaInicio,
+                "idSlot" to nuevoSlot.idSlot,
+                "estadoCita" to Constants.ESTADO_CITA_CONFIRMADA,
+                "fechaReprogramacion" to DateUtils.fechaHoraActual()
+            ))
+
+            null
+        }.addOnSuccessListener {
+            onSuccess()
+        }.addOnFailureListener { e ->
+            onFailure(e.localizedMessage ?: "Error al reprogramar la cita")
+        }
     }
 }
-
